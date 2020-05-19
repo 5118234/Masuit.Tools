@@ -18,14 +18,12 @@ namespace Masuit.Tools.Files
         /// <param name="bufferSize">缓冲区大小，默认8MB</param>
         public static void CopyToFile(this Stream fs, string dest, int bufferSize = 1024 * 8 * 1024)
         {
-            using (FileStream fsWrite = new FileStream(dest, FileMode.OpenOrCreate, FileAccess.ReadWrite))
+            using var fsWrite = new FileStream(dest, FileMode.OpenOrCreate, FileAccess.ReadWrite);
+            byte[] buf = new byte[bufferSize];
+            int len;
+            while ((len = fs.Read(buf, 0, buf.Length)) != 0)
             {
-                byte[] buf = new byte[bufferSize];
-                int len = 0;
-                while ((len = fs.Read(buf, 0, buf.Length)) != 0)
-                {
-                    fsWrite.Write(buf, 0, len);
-                }
+                fsWrite.Write(buf, 0, len);
             }
         }
 
@@ -37,21 +35,16 @@ namespace Masuit.Tools.Files
         /// <param name="bufferSize">缓冲区大小，默认8MB</param>
         public static async void CopyToFileAsync(this Stream fs, string dest, int bufferSize = 1024 * 1024 * 8)
         {
-            using (FileStream fsWrite = new FileStream(dest, FileMode.OpenOrCreate, FileAccess.ReadWrite))
+            using var fsWrite = new FileStream(dest, FileMode.OpenOrCreate, FileAccess.ReadWrite);
+            byte[] buf = new byte[bufferSize];
+            int len;
+            await Task.Run(() =>
             {
-                byte[] buf = new byte[bufferSize];
-                int len;
-                await Task.Run(() =>
+                while ((len = fs.Read(buf, 0, buf.Length)) != 0)
                 {
-                    using (fs)
-                    {
-                        while ((len = fs.Read(buf, 0, buf.Length)) != 0)
-                        {
-                            fsWrite.Write(buf, 0, len);
-                        }
-                    }
-                }).ConfigureAwait(true);
-            }
+                    fsWrite.Write(buf, 0, len);
+                }
+            }).ConfigureAwait(true);
         }
 
         /// <summary>
@@ -61,13 +54,10 @@ namespace Masuit.Tools.Files
         /// <param name="filename"></param>
         public static void SaveFile(this MemoryStream ms, string filename)
         {
-            using (var fs = new FileStream(filename, FileMode.OpenOrCreate, FileAccess.ReadWrite))
-            {
-                byte[] buffer = ms.ToArray(); // 转化为byte格式存储
-                fs.Write(buffer, 0, buffer.Length);
-                fs.Flush();
-                buffer = null;
-            }
+            using var fs = new FileStream(filename, FileMode.OpenOrCreate, FileAccess.ReadWrite);
+            byte[] buffer = ms.ToArray(); // 转化为byte格式存储
+            fs.Write(buffer, 0, buffer.Length);
+            fs.Flush();
         }
 
         /// <summary>
@@ -92,19 +82,13 @@ namespace Masuit.Tools.Files
         /// <returns>哈希值16进制字符串</returns>
         private static string HashFile(Stream fs, string algo)
         {
-            HashAlgorithm crypto;
-            switch (algo)
+            var hash = (algo switch
             {
-                case "sha1":
-                    crypto = new SHA1CryptoServiceProvider();
-                    break;
-                default:
-                    crypto = new MD5CryptoServiceProvider();
-                    break;
-            }
-            byte[] retVal = crypto.ComputeHash(fs);
-            StringBuilder sb = new StringBuilder();
-            foreach (var t in retVal)
+                "sha1" => (HashAlgorithm)new SHA1CryptoServiceProvider(),
+                _ => new MD5CryptoServiceProvider()
+            }).ComputeHash(fs);
+            var sb = new StringBuilder();
+            foreach (var t in hash)
             {
                 sb.Append(t.ToString("x2"));
             }

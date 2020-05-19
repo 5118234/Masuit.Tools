@@ -25,7 +25,8 @@ namespace Masuit.Tools.Net
 
         private string _url;
         private bool _rangeAllowed;
-
+        private readonly HttpWebRequest _request;
+        private Action<HttpWebRequest> _requestConfigure = req => req.UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.122 Safari/537.36";
         #endregion
 
         #region 公共属性
@@ -61,7 +62,20 @@ namespace Masuit.Tools.Net
         /// <summary>
         /// 已接收字节数
         /// </summary>
-        public long TotalBytesReceived => PartialDownloaderList.Where(t => t != null).Sum(t => t.TotalBytesRead);
+        public long TotalBytesReceived
+        {
+            get
+            {
+                try
+                {
+                    return PartialDownloaderList.Where(t => t != null).Sum(t => t.TotalBytesRead);
+                }
+                catch (Exception e)
+                {
+                    return 0;
+                }
+            }
+        }
 
         /// <summary>
         /// 总进度
@@ -123,6 +137,7 @@ namespace Masuit.Tools.Net
             PartialDownloaderList = new List<PartialDownloader>();
             _aop = AsyncOperationManager.CreateOperation(null);
             FilePath = savePath;
+            _request = WebRequest.Create(sourceUrl) as HttpWebRequest;
         }
 
         /// <summary>
@@ -161,7 +176,6 @@ namespace Masuit.Tools.Net
             }
 
             OrderByRemaining(PartialDownloaderList);
-
             int rem = PartialDownloaderList[0].RemainingBytes;
             if (rem < 50 * 1024)
             {
@@ -178,14 +192,12 @@ namespace Masuit.Tools.Net
             }
 
             PartialDownloaderList[0].To = from - 1;
-
             WaitOrResumeAll(PartialDownloaderList, false);
-
-            PartialDownloader temp = new PartialDownloader(_url, TempFileDirectory, Guid.NewGuid().ToString(), from, to, true);
+            var temp = new PartialDownloader(_url, TempFileDirectory, Guid.NewGuid().ToString(), from, to, true);
             temp.DownloadPartCompleted += temp_DownloadPartCompleted;
             temp.DownloadPartProgressChanged += temp_DownloadPartProgressChanged;
             PartialDownloaderList.Add(temp);
-            temp.Start();
+            temp.Start(_requestConfigure);
         }
 
         void temp_DownloadPartProgressChanged(object sender, EventArgs e)
@@ -212,51 +224,64 @@ namespace Masuit.Tools.Net
 
         void CreateFirstPartitions()
         {
-            Size = GetContentLength(_url, ref _rangeAllowed, ref _url);
+            Size = GetContentLength(ref _rangeAllowed, ref _url);
             int maximumPart = (int)(Size / (25 * 1024));
             maximumPart = maximumPart == 0 ? 1 : maximumPart;
             if (!_rangeAllowed)
+            {
                 NumberOfParts = 1;
+            }
             else if (NumberOfParts > maximumPart)
+            {
                 NumberOfParts = maximumPart;
+            }
 
             for (int i = 0; i < NumberOfParts; i++)
             {
-                PartialDownloader temp = CreateNewPd(i, NumberOfParts, Size);
+                var temp = CreateNewPd(i, NumberOfParts, Size);
                 temp.DownloadPartProgressChanged += temp_DownloadPartProgressChanged;
                 temp.DownloadPartCompleted += temp_DownloadPartCompleted;
                 PartialDownloaderList.Add(temp);
-                temp.Start();
+                temp.Start(_requestConfigure);
             }
         }
 
         void MergeParts()
         {
-            List<PartialDownloader> mergeOrderedList = SortPDsByFrom(PartialDownloaderList);
-            using (var fs = new FileStream(FilePath, FileMode.Create, FileAccess.ReadWrite))
+            var mergeOrderedList = SortPDsByFrom(PartialDownloaderList);
+            var dir = new FileInfo(FilePath).DirectoryName;
+            if (!Directory.Exists(dir))
             {
-                long totalBytesWritten = 0;
-                int mergeProgress = 0;
-                foreach (var item in mergeOrderedList)
-                {
-                    using (FileStream pds = new FileStream(item.FullPath, FileMode.Open, FileAccess.Read))
-                    {
-                        byte[] buffer = new byte[4096];
-                        int read;
-                        while ((read = pds.Read(buffer, 0, buffer.Length)) > 0)
-                        {
-                            fs.Write(buffer, 0, read);
-                            totalBytesWritten += read;
-                            int temp = (int)(totalBytesWritten * 1d / Size * 100);
-                            if (temp != mergeProgress && FileMergeProgressChanged != null)
-                            {
-                                mergeProgress = temp;
-                                _aop.Post(state => FileMergeProgressChanged(this, temp), null);
-                            }
-                        }
-                    }
+                Directory.CreateDirectory(dir);
+            }
 
+            using var fs = new FileStream(FilePath, FileMode.Create, FileAccess.ReadWrite);
+            long totalBytesWritten = 0;
+            int mergeProgress = 0;
+            foreach (var item in mergeOrderedList)
+            {
+                using var pds = new FileStream(item.FullPath, FileMode.Open, FileAccess.Read);
+                byte[] buffer = new byte[4096];
+                int read;
+                while ((read = pds.Read(buffer, 0, buffer.Length)) > 0)
+                {
+                    fs.Write(buffer, 0, read);
+                    totalBytesWritten += read;
+                    int temp = (int)(totalBytesWritten * 1d / Size * 100);
+                    if (temp != mergeProgress && FileMergeProgressChanged != null)
+                    {
+                        mergeProgress = temp;
+                        _aop.Post(state => FileMergeProgressChanged(this, temp), null);
+                    }
+                }
+
+                try
+                {
                     File.Delete(item.FullPath);
+                }
+                catch
+                {
+                    // ignored
                 }
             }
         }
@@ -278,12 +303,16 @@ namespace Masuit.Tools.Net
         /// <param name="wait"></param>
         public static void WaitOrResumeAll(List<PartialDownloader> list, bool wait)
         {
-            foreach (PartialDownloader item in list)
+            foreach (var item in list)
             {
                 if (wait)
+                {
                     item.Wait();
+                }
                 else
+                {
                     item.ResumeAfterWait();
+                }
             }
         }
 
@@ -330,31 +359,34 @@ namespace Masuit.Tools.Net
         }
 
         /// <summary>
+        /// 配置请求头
+        /// </summary>
+        /// <param name="config"></param>
+        public void Configure(Action<HttpWebRequest> config)
+        {
+            _requestConfigure = config;
+        }
+
+        /// <summary>
         /// 获取内容长度
         /// </summary>
-        /// <param name="url"></param>
         /// <param name="rangeAllowed"></param>
         /// <param name="redirectedUrl"></param>
         /// <returns></returns>
-        public static long GetContentLength(string url, ref bool rangeAllowed, ref string redirectedUrl)
+        public long GetContentLength(ref bool rangeAllowed, ref string redirectedUrl)
         {
-            HttpWebRequest req = WebRequest.Create(url) as HttpWebRequest;
-            req.UserAgent = "Mozilla/4.0 (compatible; MSIE 11.0; Windows NT 6.2; .NET CLR 1.0.3705;)";
-            req.ServicePoint.ConnectionLimit = 4;
-            long ctl;
-            using (HttpWebResponse resp = req.GetResponse() as HttpWebResponse)
+            _request.UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.122 Safari/537.36";
+            _request.ServicePoint.ConnectionLimit = 4;
+            _requestConfigure(_request);
+            using var resp = _request.GetResponse() as HttpWebResponse;
+            redirectedUrl = resp.ResponseUri.OriginalString;
+            var ctl = resp.ContentLength;
+            rangeAllowed = resp.Headers.AllKeys.Select((v, i) => new
             {
-                redirectedUrl = resp.ResponseUri.OriginalString;
-                ctl = resp.ContentLength;
-                rangeAllowed = resp.Headers.AllKeys.Select((v, i) => new
-                {
-                    HeaderName = v,
-                    HeaderValue = resp.Headers[i]
-                }).Any(k => k.HeaderName.ToLower().Contains("range") && k.HeaderValue.ToLower().Contains("byte"));
-                resp.Close();
-            }
-
-            req.Abort();
+                HeaderName = v,
+                HeaderValue = resp.Headers[i]
+            }).Any(k => k.HeaderName.ToLower().Contains("range") && k.HeaderValue.ToLower().Contains("byte"));
+            _request.Abort();
             return ctl;
         }
 
@@ -367,13 +399,11 @@ namespace Masuit.Tools.Net
         /// </summary>
         public void Pause()
         {
-            foreach (var t in PartialDownloaderList)
+            foreach (var t in PartialDownloaderList.Where(t => !t.Completed))
             {
-                if (!t.Completed)
-                    t.Stop();
+                t.Stop();
             }
 
-            //Setting a Thread.Sleep ensures all downloads are stopped and exit from loop.
             Thread.Sleep(200);
         }
 
@@ -398,14 +428,17 @@ namespace Masuit.Tools.Net
                 {
                     int from = PartialDownloaderList[i].CurrentPosition + 1;
                     int to = PartialDownloaderList[i].To;
-                    if (from > to) continue;
-                    PartialDownloader temp = new PartialDownloader(_url, TempFileDirectory, Guid.NewGuid().ToString(), from, to, _rangeAllowed);
+                    if (from > to)
+                    {
+                        continue;
+                    }
 
+                    var temp = new PartialDownloader(_url, TempFileDirectory, Guid.NewGuid().ToString(), from, to, _rangeAllowed);
                     temp.DownloadPartProgressChanged += temp_DownloadPartProgressChanged;
                     temp.DownloadPartCompleted += temp_DownloadPartCompleted;
                     PartialDownloaderList.Add(temp);
                     PartialDownloaderList[i].To = PartialDownloaderList[i].CurrentPosition;
-                    temp.Start();
+                    temp.Start(_requestConfigure);
                 }
             }
         }

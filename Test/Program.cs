@@ -1,4 +1,6 @@
-﻿using Masuit.Tools.Security;
+﻿using Masuit.Tools;
+using Masuit.Tools.Security;
+using Masuit.Tools.Systems;
 using System;
 
 namespace Test
@@ -7,9 +9,26 @@ namespace Test
     {
         static void Main(string[] args)
         {
-            RsaKey keys = RsaCrypt.GenerateRsaKeys();
-            Console.WriteLine(keys.PublicKey);
-            Console.WriteLine(keys.PrivateKey);
+            var rsaKey = RsaCrypt.GenerateRsaKeys();
+            Console.WriteLine(rsaKey.PrivateKey);
+            var enc = new MyClass()
+            {
+                SdTime = DateTime.Now,
+                MyProperty = "asdf"
+            }.ToJsonString().RSAEncrypt();
+            Console.WriteLine(enc);
+            Console.WriteLine(HiPerfTimer.Execute(() =>
+            {
+                var dec = enc.RSADecrypt();
+                Console.WriteLine(dec);
+            }) * 1000);
         }
+    }
+
+    public class MyClass
+    {
+        public string MyProperty { get; set; }
+        public DateTime SdTime { get; set; }
+
     }
 }

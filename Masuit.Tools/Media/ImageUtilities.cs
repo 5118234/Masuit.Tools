@@ -34,7 +34,7 @@ namespace Masuit.Tools.Media
             }
 
             //原始图片（获取原始图片创建对象，并使用流中嵌入的颜色管理信息）
-            Image initImage = Image.FromStream(fromFile, true);
+            var initImage = Image.FromStream(fromFile, true);
 
             //原图宽高均小于模版，不作处理，直接保存
             if ((initImage.Width <= side) && (initImage.Height <= side))
@@ -92,13 +92,14 @@ namespace Masuit.Tools.Media
                     //将截图对象赋给原图
                     initImage = (Image)pickedImage.Clone();
                     //释放截图资源
+                    initImage.Dispose();
                     pickedG.Dispose();
                     pickedImage.Dispose();
                 }
 
                 //缩略图对象
-                Image resultImage = new Bitmap(side, side);
-                Graphics resultG = Graphics.FromImage(resultImage);
+                using Image resultImage = new Bitmap(side, side);
+                using var resultG = Graphics.FromImage(resultImage);
                 //设置质量
                 resultG.InterpolationMode = InterpolationMode.HighQualityBicubic;
                 resultG.SmoothingMode = SmoothingMode.HighQuality;
@@ -109,24 +110,23 @@ namespace Masuit.Tools.Media
 
                 //关键质量控制
                 //获取系统编码类型数组,包含了jpeg,bmp,png,gif,tiff
-                ImageCodecInfo[] icis = ImageCodecInfo.GetImageEncoders();
+                var icis = ImageCodecInfo.GetImageEncoders();
                 ImageCodecInfo ici = null;
-                foreach (ImageCodecInfo i in icis)
+                foreach (var i in icis)
                 {
                     if ((i.MimeType == "image/jpeg") || (i.MimeType == "image/bmp") || (i.MimeType == "image/png") || (i.MimeType == "image/gif"))
                         ici = i;
                 }
-                EncoderParameters ep = new EncoderParameters(1);
-                ep.Param[0] = new EncoderParameter(Encoder.Quality, quality);
+
+                using var ep = new EncoderParameters(1)
+                {
+                    Param =
+                    {
+                        [0] = new EncoderParameter(Encoder.Quality, quality)
+                    }
+                };
                 //保存缩略图
                 resultImage.Save(fileSaveUrl, ici, ep);
-                //释放关键质量控制所用资源
-                ep.Dispose();
-                //释放缩略图资源
-                resultG.Dispose();
-                resultImage.Dispose();
-                //释放原始图片资源
-                initImage.Dispose();
             }
         }
 
@@ -146,7 +146,7 @@ namespace Masuit.Tools.Media
         public static void CutForCustom(this Stream fromFile, string fileSaveUrl, int maxWidth, int maxHeight, int quality)
         {
             //从文件获取原始图片，并使用流中嵌入的颜色管理信息
-            Image initImage = Image.FromStream(fromFile, true);
+            using var initImage = Image.FromStream(fromFile, true);
 
             //原图宽高均小于模版，不作处理，直接保存
             if ((initImage.Width <= maxWidth) && (initImage.Height <= maxHeight))
@@ -227,8 +227,8 @@ namespace Masuit.Tools.Media
                     pickedG.DrawImage(initImage, toR, fromR, GraphicsUnit.Pixel);
 
                     //按模版大小生成最终图片
-                    Image templateImage = new Bitmap(maxWidth, maxHeight);
-                    Graphics templateG = Graphics.FromImage(templateImage);
+                    using Image templateImage = new Bitmap(maxWidth, maxHeight);
+                    using Graphics templateG = Graphics.FromImage(templateImage);
                     templateG.InterpolationMode = InterpolationMode.High;
                     templateG.SmoothingMode = SmoothingMode.HighQuality;
                     templateG.Clear(Color.White);
@@ -238,7 +238,7 @@ namespace Masuit.Tools.Media
                     //获取系统编码类型数组,包含了jpeg,bmp,png,gif,tiff
                     ImageCodecInfo[] icis = ImageCodecInfo.GetImageEncoders();
                     ImageCodecInfo ici = null;
-                    foreach (ImageCodecInfo i in icis)
+                    foreach (var i in icis)
                     {
                         if (i.MimeType == "image/jpeg" || i.MimeType == "image/bmp" || i.MimeType == "image/png" || i.MimeType == "image/gif")
                             ici = i;
@@ -249,19 +249,10 @@ namespace Masuit.Tools.Media
 
                     //保存缩略图
                     templateImage.Save(fileSaveUrl, ici, ep);
-                    //templateImage.Save(fileSaveUrl, System.Drawing.Imaging.ImageFormat.Jpeg);
-
-                    //释放资源
-                    templateG.Dispose();
-                    templateImage.Dispose();
-
                     pickedG.Dispose();
                     pickedImage.Dispose();
                 }
             }
-
-            //释放资源
-            initImage.Dispose();
         }
 
         #endregion
@@ -282,10 +273,12 @@ namespace Masuit.Tools.Media
             //创建目录
             string dir = Path.GetDirectoryName(savePath);
             if (!Directory.Exists(dir))
+            {
                 Directory.CreateDirectory(dir);
+            }
 
             //原始图片（获取原始图片创建对象，并使用流中嵌入的颜色管理信息）
-            Image initImage = Image.FromStream(fromFile, true);
+            using Image initImage = Image.FromStream(fromFile, true);
 
             //原图宽高均小于模版，不作处理，直接保存
             if ((initImage.Width <= targetWidth) && (initImage.Height <= targetHeight))
@@ -293,13 +286,11 @@ namespace Masuit.Tools.Media
                 //文字水印
                 if (watermarkText != "")
                 {
-                    using (Graphics gWater = Graphics.FromImage(initImage))
-                    {
-                        Font fontWater = new Font("黑体", 10);
-                        Brush brushWater = new SolidBrush(Color.White);
-                        gWater.DrawString(watermarkText, fontWater, brushWater, 10, 10);
-                        gWater.Dispose();
-                    }
+                    using var gWater = Graphics.FromImage(initImage);
+                    Font fontWater = new Font("黑体", 10);
+                    Brush brushWater = new SolidBrush(Color.White);
+                    gWater.DrawString(watermarkText, fontWater, brushWater, 10, 10);
+                    gWater.Dispose();
                 }
 
                 //透明图片水印
@@ -307,38 +298,36 @@ namespace Masuit.Tools.Media
                 {
                     if (File.Exists(watermarkImage))
                     {
-                        using (Image wrImage = Image.FromFile(watermarkImage))
+                        using var wrImage = Image.FromFile(watermarkImage);
+                        //水印绘制条件：原始图片宽高均大于或等于水印图片
+                        if ((initImage.Width >= wrImage.Width) && (initImage.Height >= wrImage.Height))
                         {
-                            //水印绘制条件：原始图片宽高均大于或等于水印图片
-                            if ((initImage.Width >= wrImage.Width) && (initImage.Height >= wrImage.Height))
+                            Graphics gWater = Graphics.FromImage(initImage);
+
+                            //透明属性
+                            ImageAttributes imgAttributes = new ImageAttributes();
+                            ColorMap colorMap = new ColorMap();
+                            colorMap.OldColor = Color.FromArgb(255, 0, 255, 0);
+                            colorMap.NewColor = Color.FromArgb(0, 0, 0, 0);
+                            ColorMap[] remapTable = { colorMap };
+                            imgAttributes.SetRemapTable(remapTable, ColorAdjustType.Bitmap);
+
+                            float[][] colorMatrixElements =
                             {
-                                Graphics gWater = Graphics.FromImage(initImage);
+                                new[] {1.0f, 0.0f, 0.0f, 0.0f, 0.0f},
+                                new[] {0.0f, 1.0f, 0.0f, 0.0f, 0.0f},
+                                new[] {0.0f, 0.0f, 1.0f, 0.0f, 0.0f},
+                                new[] {0.0f, 0.0f, 0.0f, 0.5f, 0.0f}, //透明度:0.5
+                                new[] {0.0f, 0.0f, 0.0f, 0.0f, 1.0f}
+                            };
 
-                                //透明属性
-                                ImageAttributes imgAttributes = new ImageAttributes();
-                                ColorMap colorMap = new ColorMap();
-                                colorMap.OldColor = Color.FromArgb(255, 0, 255, 0);
-                                colorMap.NewColor = Color.FromArgb(0, 0, 0, 0);
-                                ColorMap[] remapTable = { colorMap };
-                                imgAttributes.SetRemapTable(remapTable, ColorAdjustType.Bitmap);
+                            ColorMatrix wmColorMatrix = new ColorMatrix(colorMatrixElements);
+                            imgAttributes.SetColorMatrix(wmColorMatrix, ColorMatrixFlag.Default, ColorAdjustType.Bitmap);
+                            gWater.DrawImage(wrImage, new Rectangle(initImage.Width - wrImage.Width, initImage.Height - wrImage.Height, wrImage.Width, wrImage.Height), 0, 0, wrImage.Width, wrImage.Height, GraphicsUnit.Pixel, imgAttributes);
 
-                                float[][] colorMatrixElements =
-                                {
-                                    new[] {1.0f, 0.0f, 0.0f, 0.0f, 0.0f},
-                                    new[] {0.0f, 1.0f, 0.0f, 0.0f, 0.0f},
-                                    new[] {0.0f, 0.0f, 1.0f, 0.0f, 0.0f},
-                                    new[] {0.0f, 0.0f, 0.0f, 0.5f, 0.0f}, //透明度:0.5
-                                    new[] {0.0f, 0.0f, 0.0f, 0.0f, 1.0f}
-                                };
-
-                                ColorMatrix wmColorMatrix = new ColorMatrix(colorMatrixElements);
-                                imgAttributes.SetColorMatrix(wmColorMatrix, ColorMatrixFlag.Default, ColorAdjustType.Bitmap);
-                                gWater.DrawImage(wrImage, new Rectangle(initImage.Width - wrImage.Width, initImage.Height - wrImage.Height, wrImage.Width, wrImage.Height), 0, 0, wrImage.Width, wrImage.Height, GraphicsUnit.Pixel, imgAttributes);
-
-                                gWater.Dispose();
-                            }
-                            wrImage.Dispose();
+                            gWater.Dispose();
                         }
+                        wrImage.Dispose();
                     }
                 }
 
@@ -376,9 +365,9 @@ namespace Masuit.Tools.Media
 
                 //生成新图
                 //新建一个bmp图片
-                Image newImage = new Bitmap((int)newWidth, (int)newHeight);
+                using Image newImage = new Bitmap((int)newWidth, (int)newHeight);
                 //新建一个画板
-                Graphics newG = Graphics.FromImage(newImage);
+                using Graphics newG = Graphics.FromImage(newImage);
 
                 //设置质量
                 newG.InterpolationMode = InterpolationMode.HighQualityBicubic;
@@ -392,13 +381,11 @@ namespace Masuit.Tools.Media
                 //文字水印
                 if (watermarkText != "")
                 {
-                    using (Graphics gWater = Graphics.FromImage(newImage))
-                    {
-                        Font fontWater = new Font("宋体", 10);
-                        Brush brushWater = new SolidBrush(Color.White);
-                        gWater.DrawString(watermarkText, fontWater, brushWater, 10, 10);
-                        gWater.Dispose();
-                    }
+                    using var gWater = Graphics.FromImage(newImage);
+                    Font fontWater = new Font("宋体", 10);
+                    Brush brushWater = new SolidBrush(Color.White);
+                    gWater.DrawString(watermarkText, fontWater, brushWater, 10, 10);
+                    gWater.Dispose();
                 }
 
                 //透明图片水印
@@ -406,47 +393,39 @@ namespace Masuit.Tools.Media
                 {
                     if (File.Exists(watermarkImage))
                     {
-                        using (Image wrImage = Image.FromFile(watermarkImage))
+                        using Image wrImage = Image.FromFile(watermarkImage);
+                        //水印绘制条件：原始图片宽高均大于或等于水印图片
+                        if ((newImage.Width >= wrImage.Width) && (newImage.Height >= wrImage.Height))
                         {
-                            //水印绘制条件：原始图片宽高均大于或等于水印图片
-                            if ((newImage.Width >= wrImage.Width) && (newImage.Height >= wrImage.Height))
+                            Graphics gWater = Graphics.FromImage(newImage);
+
+                            //透明属性
+                            ImageAttributes imgAttributes = new ImageAttributes();
+                            ColorMap colorMap = new ColorMap();
+                            colorMap.OldColor = Color.FromArgb(255, 0, 255, 0);
+                            colorMap.NewColor = Color.FromArgb(0, 0, 0, 0);
+                            ColorMap[] remapTable = { colorMap };
+                            imgAttributes.SetRemapTable(remapTable, ColorAdjustType.Bitmap);
+
+                            float[][] colorMatrixElements =
                             {
-                                Graphics gWater = Graphics.FromImage(newImage);
+                                new[] {1.0f, 0.0f, 0.0f, 0.0f, 0.0f},
+                                new[] {0.0f, 1.0f, 0.0f, 0.0f, 0.0f},
+                                new[] {0.0f, 0.0f, 1.0f, 0.0f, 0.0f},
+                                new[] {0.0f, 0.0f, 0.0f, 0.5f, 0.0f}, //透明度:0.5
+                                new[] {0.0f, 0.0f, 0.0f, 0.0f, 1.0f}
+                            };
 
-                                //透明属性
-                                ImageAttributes imgAttributes = new ImageAttributes();
-                                ColorMap colorMap = new ColorMap();
-                                colorMap.OldColor = Color.FromArgb(255, 0, 255, 0);
-                                colorMap.NewColor = Color.FromArgb(0, 0, 0, 0);
-                                ColorMap[] remapTable = { colorMap };
-                                imgAttributes.SetRemapTable(remapTable, ColorAdjustType.Bitmap);
-
-                                float[][] colorMatrixElements =
-                                {
-                                    new[] {1.0f, 0.0f, 0.0f, 0.0f, 0.0f},
-                                    new[] {0.0f, 1.0f, 0.0f, 0.0f, 0.0f},
-                                    new[] {0.0f, 0.0f, 1.0f, 0.0f, 0.0f},
-                                    new[] {0.0f, 0.0f, 0.0f, 0.5f, 0.0f}, //透明度:0.5
-                                    new[] {0.0f, 0.0f, 0.0f, 0.0f, 1.0f}
-                                };
-
-                                ColorMatrix wmColorMatrix = new ColorMatrix(colorMatrixElements);
-                                imgAttributes.SetColorMatrix(wmColorMatrix, ColorMatrixFlag.Default, ColorAdjustType.Bitmap);
-                                gWater.DrawImage(wrImage, new Rectangle(newImage.Width - wrImage.Width, newImage.Height - wrImage.Height, wrImage.Width, wrImage.Height), 0, 0, wrImage.Width, wrImage.Height, GraphicsUnit.Pixel, imgAttributes);
-                                gWater.Dispose();
-                            }
-                            wrImage.Dispose();
+                            ColorMatrix wmColorMatrix = new ColorMatrix(colorMatrixElements);
+                            imgAttributes.SetColorMatrix(wmColorMatrix, ColorMatrixFlag.Default, ColorAdjustType.Bitmap);
+                            gWater.DrawImage(wrImage, new Rectangle(newImage.Width - wrImage.Width, newImage.Height - wrImage.Height, wrImage.Width, wrImage.Height), 0, 0, wrImage.Width, wrImage.Height, GraphicsUnit.Pixel, imgAttributes);
+                            gWater.Dispose();
                         }
                     }
                 }
 
                 //保存缩略图
                 newImage.Save(savePath, ImageFormat.Jpeg);
-
-                //释放资源
-                newG.Dispose();
-                newImage.Dispose();
-                initImage.Dispose();
             }
         }
 
@@ -462,9 +441,7 @@ namespace Masuit.Tools.Media
         /// <returns>是否为WEB格式图片</returns>
         public static bool IsWebImage(string contentType)
         {
-            if ((contentType == "image/pjpeg") || (contentType == "image/jpeg") || (contentType == "image/gif") || (contentType == "image/bmp") || (contentType == "image/png"))
-                return true;
-            return false;
+            return contentType == "image/pjpeg" || contentType == "image/jpeg" || contentType == "image/gif" || contentType == "image/bmp" || contentType == "image/png";
         }
 
         #endregion
@@ -481,21 +458,26 @@ namespace Masuit.Tools.Media
         {
             int w = b.Width;
             int h = b.Height;
-            if ((rec.X >= w) || (rec.Y >= h))
+            if (rec.X >= w || rec.Y >= h)
             {
                 return null;
             }
 
             if (rec.X + rec.Width > w)
+            {
                 rec.Width = w - rec.X;
+            }
+
             if (rec.Y + rec.Height > h)
+            {
                 rec.Height = h - rec.Y;
+            }
+
             try
             {
-                Bitmap bmpOut = new Bitmap(rec.Width, rec.Height, PixelFormat.Format24bppRgb);
-                Graphics g = Graphics.FromImage(bmpOut);
+                using var bmpOut = new Bitmap(rec.Width, rec.Height, PixelFormat.Format24bppRgb);
+                using var g = Graphics.FromImage(bmpOut);
                 g.DrawImage(b, new Rectangle(0, 0, rec.Width, rec.Height), new Rectangle(rec.X, rec.Y, rec.Width, rec.Height), GraphicsUnit.Pixel);
-                g.Dispose();
                 return bmpOut;
             }
             catch (Exception)
@@ -519,12 +501,11 @@ namespace Masuit.Tools.Media
         {
             try
             {
-                Bitmap b = new Bitmap(newWidth, newHeight);
-                Graphics g = Graphics.FromImage(b);
+                using var b = new Bitmap(newWidth, newHeight);
+                using var g = Graphics.FromImage(b);
                 // 插值算法的质量   
                 g.InterpolationMode = InterpolationMode.HighQualityBicubic;
                 g.DrawImage(bmp, new Rectangle(0, 0, newWidth, newHeight), new Rectangle(0, 0, bmp.Width, bmp.Height), GraphicsUnit.Pixel);
-                g.Dispose();
                 return b;
             }
             catch (Exception)
@@ -563,86 +544,76 @@ namespace Masuit.Tools.Media
         public static bool CompressImage(string sFile, string dFile, int flag = 90, int size = 1024, bool sfsc = true)
         {
             //如果是第一次调用，原始图像的大小小于要压缩的大小，则直接复制文件，并且返回true
-            FileInfo firstFileInfo = new FileInfo(sFile);
+            var firstFileInfo = new FileInfo(sFile);
             if (sfsc && firstFileInfo.Length < size * 1024)
             {
                 firstFileInfo.CopyTo(dFile);
                 return true;
             }
 
-            using (Image iSource = Image.FromFile(sFile))
+            using Image iSource = Image.FromFile(sFile);
+            ImageFormat tFormat = iSource.RawFormat;
+            int dHeight = iSource.Height;
+            int dWidth = iSource.Width;
+            int sW, sH;
+            //按比例缩放
+            Size temSize = new Size(iSource.Width, iSource.Height);
+            if (temSize.Width > dHeight || temSize.Width > dWidth)
             {
-                ImageFormat tFormat = iSource.RawFormat;
-                int dHeight = iSource.Height;
-                int dWidth = iSource.Width;
-                int sW, sH;
-                //按比例缩放
-                Size temSize = new Size(iSource.Width, iSource.Height);
-                if (temSize.Width > dHeight || temSize.Width > dWidth)
+                if (temSize.Width * dHeight > temSize.Width * dWidth)
                 {
-                    if ((temSize.Width * dHeight) > (temSize.Width * dWidth))
+                    sW = dWidth;
+                    sH = dWidth * temSize.Height / temSize.Width;
+                }
+                else
+                {
+                    sH = dHeight;
+                    sW = temSize.Width * dHeight / temSize.Height;
+                }
+            }
+            else
+            {
+                sW = temSize.Width;
+                sH = temSize.Height;
+            }
+
+            using Bitmap bmp = new Bitmap(dWidth, dHeight);
+            using Graphics g = Graphics.FromImage(bmp);
+            g.Clear(Color.WhiteSmoke);
+            g.CompositingQuality = CompositingQuality.HighQuality;
+            g.SmoothingMode = SmoothingMode.HighQuality;
+            g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+            g.DrawImage(iSource, new Rectangle((dWidth - sW) / 2, (dHeight - sH) / 2, sW, sH), 0, 0, iSource.Width, iSource.Height, GraphicsUnit.Pixel);
+
+            //以下代码为保存图片时，设置压缩质量
+            using EncoderParameters ep = new EncoderParameters();
+            long[] qy = new long[1];
+            qy[0] = flag;//设置压缩的比例1-100
+            using EncoderParameter eParam = new EncoderParameter(Encoder.Quality, qy);
+            ep.Param[0] = eParam;
+            try
+            {
+                ImageCodecInfo[] arrayIci = ImageCodecInfo.GetImageEncoders();
+                ImageCodecInfo jpegIcIinfo = arrayIci.FirstOrDefault(t => t.FormatDescription.Equals("JPEG"));
+                if (jpegIcIinfo != null)
+                {
+                    bmp.Save(dFile, jpegIcIinfo, ep);//dFile是压缩后的新路径
+                    FileInfo fi = new FileInfo(dFile);
+                    if (fi.Length > 1024 * size)
                     {
-                        sW = dWidth;
-                        sH = (dWidth * temSize.Height) / temSize.Width;
-                    }
-                    else
-                    {
-                        sH = dHeight;
-                        sW = (temSize.Width * dHeight) / temSize.Height;
+                        flag = flag - 10;
+                        CompressImage(sFile, dFile, flag, size, false);
                     }
                 }
                 else
                 {
-                    sW = temSize.Width;
-                    sH = temSize.Height;
+                    bmp.Save(dFile, tFormat);
                 }
-
-                using (Bitmap bmp = new Bitmap(dWidth, dHeight))
-                {
-                    using (Graphics g = Graphics.FromImage(bmp))
-                    {
-                        g.Clear(Color.WhiteSmoke);
-                        g.CompositingQuality = CompositingQuality.HighQuality;
-                        g.SmoothingMode = SmoothingMode.HighQuality;
-                        g.InterpolationMode = InterpolationMode.HighQualityBicubic;
-                        g.DrawImage(iSource, new Rectangle((dWidth - sW) / 2, (dHeight - sH) / 2, sW, sH), 0, 0, iSource.Width, iSource.Height, GraphicsUnit.Pixel);
-                    }
-
-                    //以下代码为保存图片时，设置压缩质量
-                    using (EncoderParameters ep = new EncoderParameters())
-                    {
-                        long[] qy = new long[1];
-                        qy[0] = flag;//设置压缩的比例1-100
-                        using (EncoderParameter eParam = new EncoderParameter(Encoder.Quality, qy))
-                        {
-                            ep.Param[0] = eParam;
-                            try
-                            {
-                                ImageCodecInfo[] arrayIci = ImageCodecInfo.GetImageEncoders();
-                                ImageCodecInfo jpegIcIinfo = arrayIci.FirstOrDefault(t => t.FormatDescription.Equals("JPEG"));
-                                if (jpegIcIinfo != null)
-                                {
-                                    bmp.Save(dFile, jpegIcIinfo, ep);//dFile是压缩后的新路径
-                                    FileInfo fi = new FileInfo(dFile);
-                                    if (fi.Length > 1024 * size)
-                                    {
-                                        flag = flag - 10;
-                                        CompressImage(sFile, dFile, flag, size, false);
-                                    }
-                                }
-                                else
-                                {
-                                    bmp.Save(dFile, tFormat);
-                                }
-                                return true;
-                            }
-                            catch
-                            {
-                                return false;
-                            }
-                        }
-                    }
-                }
+                return true;
+            }
+            catch
+            {
+                return false;
             }
         }
 
@@ -664,78 +635,68 @@ namespace Masuit.Tools.Media
                 return true;
             }
 
-            using (Image iSource = Image.FromStream(src))
+            using Image iSource = Image.FromStream(src);
+            ImageFormat tFormat = iSource.RawFormat;
+            int dHeight = iSource.Height;
+            int dWidth = iSource.Width;
+            int sW, sH;
+            //按比例缩放
+            Size temSize = new Size(iSource.Width, iSource.Height);
+            if (temSize.Width > dHeight || temSize.Width > dWidth)
             {
-                ImageFormat tFormat = iSource.RawFormat;
-                int dHeight = iSource.Height;
-                int dWidth = iSource.Width;
-                int sW, sH;
-                //按比例缩放
-                Size temSize = new Size(iSource.Width, iSource.Height);
-                if (temSize.Width > dHeight || temSize.Width > dWidth)
+                if ((temSize.Width * dHeight) > (temSize.Width * dWidth))
                 {
-                    if ((temSize.Width * dHeight) > (temSize.Width * dWidth))
+                    sW = dWidth;
+                    sH = (dWidth * temSize.Height) / temSize.Width;
+                }
+                else
+                {
+                    sH = dHeight;
+                    sW = (temSize.Width * dHeight) / temSize.Height;
+                }
+            }
+            else
+            {
+                sW = temSize.Width;
+                sH = temSize.Height;
+            }
+
+            using Bitmap bmp = new Bitmap(dWidth, dHeight);
+            using Graphics g = Graphics.FromImage(bmp);
+            g.Clear(Color.WhiteSmoke);
+            g.CompositingQuality = CompositingQuality.HighQuality;
+            g.SmoothingMode = SmoothingMode.HighQuality;
+            g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+            g.DrawImage(iSource, new Rectangle((dWidth - sW) / 2, (dHeight - sH) / 2, sW, sH), 0, 0, iSource.Width, iSource.Height, GraphicsUnit.Pixel);
+
+            //以下代码为保存图片时，设置压缩质量
+            using var ep = new EncoderParameters();
+            long[] qy = new long[1];
+            qy[0] = flag;//设置压缩的比例1-100
+            using EncoderParameter eParam = new EncoderParameter(Encoder.Quality, qy);
+            ep.Param[0] = eParam;
+            try
+            {
+                ImageCodecInfo[] arrayIci = ImageCodecInfo.GetImageEncoders();
+                ImageCodecInfo jpegIcIinfo = arrayIci.FirstOrDefault(t => t.FormatDescription.Equals("JPEG"));
+                if (jpegIcIinfo != null)
+                {
+                    bmp.Save(dest, jpegIcIinfo, ep);//dFile是压缩后的新路径
+                    if (dest.Length > 1024 * size)
                     {
-                        sW = dWidth;
-                        sH = (dWidth * temSize.Height) / temSize.Width;
-                    }
-                    else
-                    {
-                        sH = dHeight;
-                        sW = (temSize.Width * dHeight) / temSize.Height;
+                        flag = flag - 10;
+                        CompressImage(src, dest, flag, size, false);
                     }
                 }
                 else
                 {
-                    sW = temSize.Width;
-                    sH = temSize.Height;
+                    bmp.Save(dest, tFormat);
                 }
-
-                using (Bitmap bmp = new Bitmap(dWidth, dHeight))
-                {
-                    using (Graphics g = Graphics.FromImage(bmp))
-                    {
-                        g.Clear(Color.WhiteSmoke);
-                        g.CompositingQuality = CompositingQuality.HighQuality;
-                        g.SmoothingMode = SmoothingMode.HighQuality;
-                        g.InterpolationMode = InterpolationMode.HighQualityBicubic;
-                        g.DrawImage(iSource, new Rectangle((dWidth - sW) / 2, (dHeight - sH) / 2, sW, sH), 0, 0, iSource.Width, iSource.Height, GraphicsUnit.Pixel);
-                    }
-
-                    //以下代码为保存图片时，设置压缩质量
-                    using (EncoderParameters ep = new EncoderParameters())
-                    {
-                        long[] qy = new long[1];
-                        qy[0] = flag;//设置压缩的比例1-100
-                        using (EncoderParameter eParam = new EncoderParameter(Encoder.Quality, qy))
-                        {
-                            ep.Param[0] = eParam;
-                            try
-                            {
-                                ImageCodecInfo[] arrayIci = ImageCodecInfo.GetImageEncoders();
-                                ImageCodecInfo jpegIcIinfo = arrayIci.FirstOrDefault(t => t.FormatDescription.Equals("JPEG"));
-                                if (jpegIcIinfo != null)
-                                {
-                                    bmp.Save(dest, jpegIcIinfo, ep);//dFile是压缩后的新路径
-                                    if (dest.Length > 1024 * size)
-                                    {
-                                        flag = flag - 10;
-                                        CompressImage(src, dest, flag, size, false);
-                                    }
-                                }
-                                else
-                                {
-                                    bmp.Save(dest, tFormat);
-                                }
-                                return true;
-                            }
-                            catch
-                            {
-                                return false;
-                            }
-                        }
-                    }
-                }
+                return true;
+            }
+            catch
+            {
+                return false;
             }
         }
 
@@ -755,7 +716,6 @@ namespace Masuit.Tools.Media
         {
             int towidth = width;
             int toheight = height;
-
             int x = 0;
             int y = 0;
             int ow = originalImage.Width;
@@ -790,10 +750,10 @@ namespace Masuit.Tools.Media
             }
 
             //新建一个bmp图片
-            Image bitmap = new Bitmap(towidth, toheight);
+            using Image bitmap = new Bitmap(towidth, toheight);
 
             //新建一个画板
-            Graphics g = Graphics.FromImage(bitmap);
+            using Graphics g = Graphics.FromImage(bitmap);
 
             //设置高质量插值法
             g.InterpolationMode = InterpolationMode.High;
@@ -810,17 +770,8 @@ namespace Masuit.Tools.Media
             //三：画那块区域。
             g.DrawImage(originalImage, new Rectangle(0, 0, towidth, toheight), new Rectangle(x, y, ow, oh), GraphicsUnit.Pixel);
 
-            try
-            {
-                //以jpg格式保存缩略图
-                bitmap.Save(thumbnailPath, ImageFormat.Jpeg);
-            }
-            finally
-            {
-                originalImage.Dispose();
-                bitmap.Dispose();
-                g.Dispose();
-            }
+            //以jpg格式保存缩略图
+            bitmap.Save(thumbnailPath, ImageFormat.Jpeg);
         }
 
         #endregion
@@ -865,17 +816,15 @@ namespace Masuit.Tools.Media
         /// <param name="height">原始图片的高度</param>
         public static Bitmap RePic(this Bitmap mybm, int width, int height)
         {
-            Bitmap bm = new Bitmap(width, height); //初始化一个记录处理后的图片的对象
-            int x, y, resultR, resultG, resultB;
-            Color pixel;
-            for (x = 0; x < width; x++)
+            using var bm = new Bitmap(width, height); //初始化一个记录处理后的图片的对象
+            for (var x = 0; x < width; x++)
             {
-                for (y = 0; y < height; y++)
+                for (var y = 0; y < height; y++)
                 {
-                    pixel = mybm.GetPixel(x, y); //获取当前坐标的像素值
-                    resultR = 255 - pixel.R; //反红
-                    resultG = 255 - pixel.G; //反绿
-                    resultB = 255 - pixel.B; //反蓝
+                    var pixel = mybm.GetPixel(x, y);
+                    var resultR = 255 - pixel.R;
+                    var resultG = 255 - pixel.G;
+                    var resultB = 255 - pixel.B;
                     bm.SetPixel(x, y, Color.FromArgb(resultR, resultG, resultB)); //绘图
                 }
             }
@@ -895,7 +844,7 @@ namespace Masuit.Tools.Media
         /// <param name="height">原始图片的高度</param>
         public static Bitmap Relief(this Bitmap oldBitmap, int width, int height)
         {
-            Bitmap newBitmap = new Bitmap(width, height);
+            using var newBitmap = new Bitmap(width, height);
             for (int x = 0; x < width - 1; x++)
             {
                 for (int y = 0; y < height - 1; y++)
@@ -932,18 +881,14 @@ namespace Masuit.Tools.Media
         {
             try
             {
-                using (Bitmap bap = new Bitmap(newW, newH))
+                using Bitmap bap = new Bitmap(newW, newH);
+                return await Task.Run(() =>
                 {
-                    return await Task.Run(() =>
-                    {
-                        using (Graphics g = Graphics.FromImage(bap))
-                        {
-                            g.InterpolationMode = InterpolationMode.HighQualityBicubic;
-                            g.DrawImage(bap, new Rectangle(0, 0, newW, newH), new Rectangle(0, 0, bap.Width, bap.Height), GraphicsUnit.Pixel);
-                        }
-                        return bap;
-                    }).ConfigureAwait(false);
-                }
+                    using Graphics g = Graphics.FromImage(bap);
+                    g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+                    g.DrawImage(bap, new Rectangle(0, 0, newW, newH), new Rectangle(0, 0, bap.Width, bap.Height), GraphicsUnit.Pixel);
+                    return bap;
+                }).ConfigureAwait(false);
             }
             catch (Exception)
             {
@@ -963,21 +908,18 @@ namespace Masuit.Tools.Media
         /// <param name="height">原始图片的高度</param>
         public static Bitmap FilPic(this Bitmap mybm, int width, int height)
         {
-            using (Bitmap bm = new Bitmap(width, height)) //初始化一个记录滤色效果的图片对象
+            using var bm = new Bitmap(width, height);
+            for (var x = 0; x < width; x++)
             {
-                int x, y;
-                Color pixel;
-                for (x = 0; x < width; x++)
+                int y;
+                for (y = 0; y < height; y++)
                 {
-                    for (y = 0; y < height; y++)
-                    {
-                        pixel = mybm.GetPixel(x, y); //获取当前坐标的像素值
-                        bm.SetPixel(x, y, Color.FromArgb(0, pixel.G, pixel.B)); //绘图
-                    }
+                    var pixel = mybm.GetPixel(x, y);
+                    bm.SetPixel(x, y, Color.FromArgb(0, pixel.G, pixel.B)); //绘图
                 }
-
-                return bm;
             }
+
+            return bm;
         }
 
         #endregion
@@ -992,20 +934,20 @@ namespace Masuit.Tools.Media
         /// <param name="height">原始图片的高度</param>
         public static Bitmap RevPicLR(this Bitmap mybm, int width, int height)
         {
-            using (Bitmap bm = new Bitmap(width, height))
+            using var bm = new Bitmap(width, height);
+            //x,y是循环次数,z是用来记录像素点的x坐标的变化的
+            for (var y = height - 1; y >= 0; y--)
             {
-                int x, y, z; //x,y是循环次数,z是用来记录像素点的x坐标的变化的
-                for (y = height - 1; y >= 0; y--)
+                int x; //x,y是循环次数,z是用来记录像素点的x坐标的变化的
+                int z; //x,y是循环次数,z是用来记录像素点的x坐标的变化的
+                for (x = width - 1, z = 0; x >= 0; x--)
                 {
-                    for (x = width - 1, z = 0; x >= 0; x--)
-                    {
-                        var pixel = mybm.GetPixel(x, y);
-                        bm.SetPixel(z++, y, Color.FromArgb(pixel.R, pixel.G, pixel.B)); //绘图
-                    }
+                    var pixel = mybm.GetPixel(x, y);
+                    bm.SetPixel(z++, y, Color.FromArgb(pixel.R, pixel.G, pixel.B)); //绘图
                 }
-
-                return bm;
             }
+
+            return bm;
         }
 
         #endregion
@@ -1020,21 +962,19 @@ namespace Masuit.Tools.Media
         /// <param name="height">原始图片的高度</param>
         public static Bitmap RevPicUD(this Bitmap mybm, int width, int height)
         {
-            Bitmap bm = new Bitmap(width, height);
-            using (bm)
+            using var bm = new Bitmap(width, height);
+            for (var x = 0; x < width; x++)
             {
-                int x, y, z;
-                for (x = 0; x < width; x++)
+                int y;
+                int z;
+                for (y = height - 1, z = 0; y >= 0; y--)
                 {
-                    for (y = height - 1, z = 0; y >= 0; y--)
-                    {
-                        var pixel = mybm.GetPixel(x, y);
-                        bm.SetPixel(x, z++, Color.FromArgb(pixel.R, pixel.G, pixel.B)); //绘图
-                    }
+                    var pixel = mybm.GetPixel(x, y);
+                    bm.SetPixel(x, z++, Color.FromArgb(pixel.R, pixel.G, pixel.B)); //绘图
                 }
-
-                return bm;
             }
+
+            return bm;
         }
 
         #endregion
@@ -1051,30 +991,23 @@ namespace Masuit.Tools.Media
             try
             {
                 Size newSize = new Size(100, 125);
-                Bitmap outBmp = new Bitmap(newSize.Width, newSize.Height);
-                Graphics g = Graphics.FromImage(outBmp);
+                using Bitmap outBmp = new Bitmap(newSize.Width, newSize.Height);
+                using Graphics g = Graphics.FromImage(outBmp);
                 g.CompositingQuality = CompositingQuality.HighQuality;
                 g.SmoothingMode = SmoothingMode.HighQuality;
                 g.InterpolationMode = InterpolationMode.HighQualityBicubic;
                 g.DrawImage(img, new Rectangle(0, 0, newSize.Width, newSize.Height), 0, 0, img.Width, img.Height, GraphicsUnit.Pixel);
-                g.Dispose();
                 var encoderParams = new EncoderParameters();
                 var quality = new long[1];
                 quality[0] = 100;
                 encoderParams.Param[0] = new EncoderParameter(Encoder.Quality, quality);
                 ImageCodecInfo[] arrayICI = ImageCodecInfo.GetImageEncoders();
-                ImageCodecInfo jpegICI = null;
-                for (int x = 0; x < arrayICI.Length; x++)
+                ImageCodecInfo jpegICI = arrayICI.FirstOrDefault(t => t.FormatDescription.Equals("JPEG"));
+                if (jpegICI != null)
                 {
-                    if (arrayICI[x].FormatDescription.Equals("JPEG"))
-                    {
-                        jpegICI = arrayICI[x]; //设置JPEG编码
-                        break;
-                    }
+                    outBmp.Save(newfile, ImageFormat.Jpeg);
                 }
 
-                if (jpegICI != null) outBmp.Save(newfile, ImageFormat.Jpeg);
-                outBmp.Dispose();
                 return true;
             }
             catch (Exception)
@@ -1110,22 +1043,18 @@ namespace Masuit.Tools.Media
         /// <param name="height">图片的高度</param>
         public static Bitmap BWPic(this Bitmap mybm, int width, int height)
         {
-            Bitmap bm = new Bitmap(width, height);
-            using (bm)
+            using var bm = new Bitmap(width, height);
+            for (var x = 0; x < width; x++)
             {
-                int x, y; //x,y是循环次数
-                for (x = 0; x < width; x++)
+                for (var y = 0; y < height; y++)
                 {
-                    for (y = 0; y < height; y++)
-                    {
-                        var pixel = mybm.GetPixel(x, y);
-                        var result = (pixel.R + pixel.G + pixel.B) / 3; //记录处理后的像素值
-                        bm.SetPixel(x, y, Color.FromArgb(result, result, result));
-                    }
+                    var pixel = mybm.GetPixel(x, y);
+                    var result = (pixel.R + pixel.G + pixel.B) / 3; //记录处理后的像素值
+                    bm.SetPixel(x, y, Color.FromArgb(result, result, result));
                 }
-
-                return bm;
             }
+
+            return bm;
         }
 
         #endregion
@@ -1139,15 +1068,12 @@ namespace Masuit.Tools.Media
         /// <param name="pSavedPath">保存路径</param>
         public static void GetFrames(this Image gif, string pSavedPath)
         {
-            using (gif)
+            var fd = new FrameDimension(gif.FrameDimensionsList[0]);
+            int count = gif.GetFrameCount(fd); //获取帧数(gif图片可能包含多帧，其它格式图片一般仅一帧)
+            for (int i = 0; i < count; i++) //以Jpeg格式保存各帧
             {
-                FrameDimension fd = new FrameDimension(gif.FrameDimensionsList[0]);
-                int count = gif.GetFrameCount(fd); //获取帧数(gif图片可能包含多帧，其它格式图片一般仅一帧)
-                for (int i = 0; i < count; i++) //以Jpeg格式保存各帧
-                {
-                    gif.SelectActiveFrame(fd, i);
-                    gif.Save(pSavedPath + "\\frame_" + i + ".jpg", ImageFormat.Jpeg);
-                }
+                gif.SelectActiveFrame(fd, i);
+                gif.Save(pSavedPath + "\\frame_" + i + ".jpg", ImageFormat.Jpeg);
             }
         }
 
@@ -1162,23 +1088,15 @@ namespace Masuit.Tools.Media
         /// <exception cref="Exception">操作失败。</exception>
         public static Bitmap SaveDataUriAsImageFile(this string source)
         {
-            string strbase64 = source.Substring(source.IndexOf(',') + 1);
-            strbase64 = strbase64.Trim('\0');
-            Bitmap bmp2;
+            string strbase64 = source.Substring(source.IndexOf(',') + 1).Trim('\0');
             byte[] arr = Convert.FromBase64String(strbase64);
-            using (var ms = new MemoryStream(arr))
-            {
-                var bmp = new Bitmap(ms);
-                //新建第二个bitmap类型的bmp2变量。
-                bmp2 = new Bitmap(bmp, bmp.Width, bmp.Height);
-                //将第一个bmp拷贝到bmp2中
-                Graphics draw = Graphics.FromImage(bmp2);
-                using (draw)
-                {
-                    draw.DrawImage(bmp, 0, 0, bmp.Width, bmp.Height);
-                }
-            }
+            using var ms = new MemoryStream(arr);
+            using var bmp = new Bitmap(ms);
+            //新建第二个bitmap类型的bmp2变量。
+            using var bmp2 = new Bitmap(bmp, bmp.Width, bmp.Height);
+            using var draw = Graphics.FromImage(bmp2);
+            draw.DrawImage(bmp, 0, 0, bmp.Width, bmp.Height);
             return bmp2;
         }
-    } //end class
+    }
 }

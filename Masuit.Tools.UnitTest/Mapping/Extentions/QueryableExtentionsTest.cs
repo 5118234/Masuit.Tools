@@ -2,7 +2,6 @@
 using Masuit.Tools.Mapping.Extensions;
 using Masuit.Tools.UnitTest.Mapping.ClassTests;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System;
 using System.Linq;
 using System.Linq.Expressions;
 
@@ -66,26 +65,6 @@ namespace Masuit.Tools.UnitTest.Mapping.Extentions
 
             IQueryable<ClassSource> actual = expected.OrderByDescending<ClassSource, ClassDest>("PropInt1").ThenByDescending<ClassSource, ClassDest>("PropInt1");
             Assert.IsTrue(CheckExpressionMethod(actual.Expression, nameof(QueryableExtentions.ThenByDescending)));
-        }
-
-        [TestMethod, TestCategory("Extentions")]
-        public void Select_Success()
-        {
-            Init(null);
-
-            QueryableImplTest<ClassSource> expected = new QueryableImplTest<ClassSource>();
-
-            var actual = expected.Select<ClassSource, ClassDest>();
-            Assert.IsTrue(CheckExpressionMethod(actual.Expression, nameof(QueryableExtentions.Select)));
-        }
-
-        [TestMethod, TestCategory("Extentions")]
-        public void Where_Success()
-        {
-            QueryableImplTest<ClassDest> expected = new QueryableImplTest<ClassDest>();
-            Expression<Func<ClassSource, bool>> criterias = x => x.PropInt1 == 1;
-            var actual = expected.Where(criterias);
-            Assert.IsTrue(CheckExpressionMethod(actual.Expression, nameof(QueryableExtentions.Where)));
         }
 
         private bool CheckExpressionMethod(Expression expression, string methodeName)

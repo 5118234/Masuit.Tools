@@ -1,7 +1,8 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Data;
+using System.Linq;
 using System.Reflection;
 
 namespace Masuit.Tools.Database
@@ -49,22 +50,14 @@ namespace Masuit.Tools.Database
         /// <returns></returns>
         public static List<T> ToList<T>(this DataTable dt) where T : class, new()
         {
-            List<T> list = new List<T>();
-            using (dt)
+            var list = new List<T>();
+            if (dt == null || dt.Rows.Count == 0)
             {
-                if (dt == null || dt.Rows.Count == 0)
-                {
-                    return list;
-                }
-
-                DataTableBuilder<T> eblist = DataTableBuilder<T>.CreateBuilder(dt.Rows[0]);
-                foreach (DataRow info in dt.Rows)
-                {
-                    list.Add(eblist.Build(info));
-                }
-
                 return list;
             }
+
+            list.AddRange(dt.Rows.Cast<DataRow>().Select(info => DataTableBuilder<T>.CreateBuilder(dt.Rows[0]).Build(info)));
+            return list;
         }
 
         /// <summary>
@@ -72,10 +65,11 @@ namespace Masuit.Tools.Database
         /// </summary>
         /// <typeparam name="T">集合项类型</typeparam>
         /// <param name="list">集合</param>
+        /// <param name="tableName">表名</param>
         /// <returns>数据集(表)</returns>
-        public static DataTable ToDataTable<T>(this IList<T> list)
+        public static DataTable ToDataTable<T>(this IEnumerable<T> list, string tableName = null)
         {
-            return ToDataTable(list, null);
+            return ToDataTable(list.ToList(), tableName);
         }
 
         /// <summary>
@@ -83,61 +77,19 @@ namespace Masuit.Tools.Database
         /// </summary>
         /// <typeparam name="T">集合项类型</typeparam>
         /// <param name="list">集合</param>
-        /// <param name="propertyName">需要返回的列的列名</param>
+        /// <param name="tableName">表名</param>
         /// <returns>数据集(表)</returns>
-        public static DataTable ToDataTable<T>(this IList<T> list, params string[] propertyName)
+        public static DataTable ToDataTable<T>(this IList<T> list, string tableName = null)
         {
-            List<string> propertyNameList = new List<string>();
-            if (propertyName != null)
-            {
-                propertyNameList.AddRange(propertyName);
-            }
-
-            DataTable result = new DataTable();
+            var result = new DataTable(tableName);
             if (list.Count <= 0)
             {
                 return result;
             }
 
-            var propertys = list[0].GetType().GetProperties();
-            propertys.ForEach(pi =>
-            {
-                if (propertyNameList.Count == 0)
-                {
-                    result.Columns.Add(pi.Name, pi.PropertyType);
-                }
-                else
-                {
-                    if (propertyNameList.Contains(pi.Name))
-                    {
-                        result.Columns.Add(pi.Name, pi.PropertyType);
-                    }
-                }
-            });
-            list.ForEach(item =>
-            {
-                ArrayList tempList = new ArrayList();
-                foreach (PropertyInfo pi in propertys)
-                {
-                    if (propertyNameList.Count == 0)
-                    {
-                        object obj = pi.GetValue(item, null);
-                        tempList.Add(obj);
-                    }
-                    else
-                    {
-                        if (propertyNameList.Contains(pi.Name))
-                        {
-                            object obj = pi.GetValue(item, null);
-                            tempList.Add(obj);
-                        }
-                    }
-                }
-
-                object[] array = tempList.ToArray();
-                result.LoadDataRow(array, true);
-            });
-
+            var properties = list[0].GetType().GetProperties();
+            result.Columns.AddRange(properties.Select(p => new DataColumn(p.GetCustomAttribute<DescriptionAttribute>()?.Description ?? p.Name, p.PropertyType)).ToArray());
+            list.ForEach(item => result.LoadDataRow(properties.Select(p => p.GetValue(item)).ToArray(), true));
             return result;
         }
 
@@ -175,17 +127,19 @@ namespace Masuit.Tools.Database
             string[] nameArray = nameString.Split(',', ';');
             foreach (string item in nameArray)
             {
-                if (!string.IsNullOrEmpty(item))
+                if (string.IsNullOrEmpty(item))
                 {
-                    string[] subItems = item.Split('|');
-                    if (subItems.Length == 2)
-                    {
-                        dt.Columns.Add(subItems[0], ConvertType(subItems[1]));
-                    }
-                    else
-                    {
-                        dt.Columns.Add(subItems[0]);
-                    }
+                    continue;
+                }
+
+                string[] subItems = item.Split('|');
+                if (subItems.Length == 2)
+                {
+                    dt.Columns.Add(subItems[0], ConvertType(subItems[1]));
+                }
+                else
+                {
+                    dt.Columns.Add(subItems[0]);
                 }
             }
 
@@ -197,69 +151,33 @@ namespace Masuit.Tools.Database
         /// </summary>
         /// <param name="typeName">类型的名称</param>
         /// <returns>Type对象</returns>
-        private static Type ConvertType(string typeName)
+        private static Type ConvertType(string typeName) => typeName.ToLower().Replace("system.", "") switch
         {
-            typeName = typeName.ToLower().Replace("system.", "");
-            Type newType = typeof(string);
-            switch (typeName)
-            {
-                case "boolean":
-                case "bool":
-                    newType = typeof(bool);
-                    break;
-                case "int16":
-                case "short":
-                    newType = typeof(short);
-                    break;
-                case "int32":
-                case "int":
-                    newType = typeof(int);
-                    break;
-                case "long":
-                case "int64":
-                    newType = typeof(long);
-                    break;
-                case "uint16":
-                case "ushort":
-                    newType = typeof(ushort);
-                    break;
-                case "uint32":
-                case "uint":
-                    newType = typeof(uint);
-                    break;
-                case "uint64":
-                case "ulong":
-                    newType = typeof(ulong);
-                    break;
-                case "single":
-                case "float":
-                    newType = typeof(float);
-                    break;
-                case "string":
-                    newType = typeof(string);
-                    break;
-                case "guid":
-                    newType = typeof(Guid);
-                    break;
-                case "decimal":
-                    newType = typeof(decimal);
-                    break;
-                case "double":
-                    newType = typeof(double);
-                    break;
-                case "datetime":
-                    newType = typeof(DateTime);
-                    break;
-                case "byte":
-                    newType = typeof(byte);
-                    break;
-                case "char":
-                    newType = typeof(char);
-                    break;
-            }
-
-            return newType;
-        }
+            "boolean" => typeof(bool),
+            "bool" => typeof(bool),
+            "int16" => typeof(short),
+            "short" => typeof(short),
+            "int32" => typeof(int),
+            "int" => typeof(int),
+            "long" => typeof(long),
+            "int64" => typeof(long),
+            "uint16" => typeof(ushort),
+            "ushort" => typeof(ushort),
+            "uint32" => typeof(uint),
+            "uint" => typeof(uint),
+            "uint64" => typeof(ulong),
+            "ulong" => typeof(ulong),
+            "single" => typeof(float),
+            "float" => typeof(float),
+            "string" => typeof(string),
+            "guid" => typeof(Guid),
+            "decimal" => typeof(decimal),
+            "double" => typeof(double),
+            "datetime" => typeof(DateTime),
+            "byte" => typeof(byte),
+            "char" => typeof(char),
+            _ => typeof(string)
+        };
 
         /// <summary>
         /// 获得从DataRowCollection转换成的DataRow数组
@@ -291,7 +209,7 @@ namespace Masuit.Tools.Database
                 return new DataTable();
             }
 
-            DataTable dt = rows[0].Table.Clone();
+            var dt = rows[0].Table.Clone();
             dt.DefaultView.Sort = rows[0].Table.DefaultView.Sort;
             foreach (var t in rows)
             {

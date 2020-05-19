@@ -1,7 +1,8 @@
 ﻿using Ganss.XSS;
-using Masuit.Tools.Win32;
+using HtmlAgilityPack;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.RegularExpressions;
 
 namespace Masuit.Tools.Html
@@ -11,6 +12,27 @@ namespace Masuit.Tools.Html
     /// </summary>
     public static partial class HtmlTools
     {
+        private static readonly HtmlSanitizer Sanitizer = new HtmlSanitizer();
+
+        static HtmlTools()
+        {
+            Sanitizer.AllowedAttributes.Remove("id");
+            Sanitizer.AllowedAttributes.Remove("alt");
+            Sanitizer.AllowedCssProperties.Remove("font-family");
+            Sanitizer.AllowedCssProperties.Remove("background-color");
+            Sanitizer.KeepChildNodes = true;
+            Sanitizer.AllowedTags.Remove("input");
+            Sanitizer.AllowedTags.Remove("button");
+            Sanitizer.AllowedTags.Remove("iframe");
+            Sanitizer.AllowedTags.Remove("frame");
+            Sanitizer.AllowedTags.Remove("textarea");
+            Sanitizer.AllowedTags.Remove("select");
+            Sanitizer.AllowedTags.Remove("form");
+            Sanitizer.AllowedAttributes.Add("src");
+            Sanitizer.AllowedAttributes.Add("class");
+            Sanitizer.AllowedAttributes.Add("style");
+        }
+
         /// <summary>
         /// 标准的防止html的xss净化器
         /// </summary>
@@ -18,20 +40,7 @@ namespace Masuit.Tools.Html
         /// <returns></returns>
         public static string HtmlSantinizerStandard(this string html)
         {
-            var sanitizer = new HtmlSanitizer();
-            sanitizer.AllowedAttributes.Remove("id");
-            sanitizer.AllowedAttributes.Remove("alt");
-            sanitizer.AllowedCssProperties.Remove("font-family");
-            sanitizer.AllowedCssProperties.Remove("background-color");
-            sanitizer.KeepChildNodes = true;
-            sanitizer.AllowedTags.Remove("input");
-            sanitizer.AllowedTags.Remove("button");
-            sanitizer.AllowedTags.Remove("iframe");
-            sanitizer.AllowedTags.Remove("frame");
-            sanitizer.AllowedTags.Remove("textarea");
-            sanitizer.AllowedTags.Remove("select");
-            sanitizer.AllowedTags.Remove("form");
-            return sanitizer.Sanitize(html);
+            return Sanitizer.Sanitize(html);
         }
 
         /// <summary>
@@ -44,12 +53,11 @@ namespace Masuit.Tools.Html
         /// <returns></returns>
         public static string HtmlSantinizerCustom(this string html, string[] labels = null, string[] attributes = null, string[] styles = null)
         {
-            var sanitizer = new HtmlSanitizer();
             if (labels != null)
             {
                 foreach (string label in labels)
                 {
-                    sanitizer.AllowedTags.Remove(label);
+                    Sanitizer.AllowedTags.Remove(label);
                 }
             }
 
@@ -57,7 +65,7 @@ namespace Masuit.Tools.Html
             {
                 foreach (string attr in attributes)
                 {
-                    sanitizer.AllowedAttributes.Remove(attr);
+                    Sanitizer.AllowedAttributes.Remove(attr);
                 }
             }
 
@@ -65,12 +73,12 @@ namespace Masuit.Tools.Html
             {
                 foreach (string p in styles)
                 {
-                    sanitizer.AllowedCssProperties.Remove(p);
+                    Sanitizer.AllowedCssProperties.Remove(p);
                 }
             }
 
-            sanitizer.KeepChildNodes = true;
-            return sanitizer.Sanitize(html);
+            Sanitizer.KeepChildNodes = true;
+            return Sanitizer.Sanitize(html);
         }
         /// <summary>
         /// 去除html标签后并截取字符串
@@ -80,8 +88,9 @@ namespace Masuit.Tools.Html
         /// <returns></returns>
         public static string RemoveHtmlTag(this string html, int length = 0)
         {
-            string strText = Regex.Replace(html, "<[^>]+>", "");
-            strText = Regex.Replace(strText, "&[^;]+;", "");
+            var doc = new HtmlDocument();
+            doc.LoadHtml(html);
+            var strText = doc.DocumentNode.InnerText;
             if (length > 0 && strText.Length > length)
             {
                 return strText.Substring(0, length);
@@ -104,41 +113,6 @@ namespace Masuit.Tools.Html
             return s;
         }
 
-        ///<summary>   
-        /// 清除HTML标记   
-        ///</summary>   
-        ///<param name="htmlstring">包括HTML的源码</param>   
-        ///<returns>已经去除后的文字</returns>   
-        public static string RemoveHtml(this string htmlstring)
-        {
-            //删除脚本   
-            htmlstring = Regex.Replace(htmlstring, "<script[^>]*?>.*?</script>", "", RegexOptions.IgnoreCase);
-
-            //删除HTML   
-            Regex regex = new Regex("<.+?>", RegexOptions.IgnoreCase);
-            htmlstring = regex.Replace(htmlstring, "");
-            htmlstring = Regex.Replace(htmlstring, "<(.[^>]*)>", "", RegexOptions.IgnoreCase);
-            htmlstring = Regex.Replace(htmlstring, @"([\r\n])[\s]+", "", RegexOptions.IgnoreCase);
-            htmlstring = Regex.Replace(htmlstring, "-->", "", RegexOptions.IgnoreCase);
-            htmlstring = Regex.Replace(htmlstring, "<!--.*", "", RegexOptions.IgnoreCase);
-            htmlstring = Regex.Replace(htmlstring, "&(quot|#34);", "\"", RegexOptions.IgnoreCase);
-            htmlstring = Regex.Replace(htmlstring, "&(amp|#38);", "&", RegexOptions.IgnoreCase);
-            htmlstring = Regex.Replace(htmlstring, "&(lt|#60);", "<", RegexOptions.IgnoreCase);
-            htmlstring = Regex.Replace(htmlstring, "&(gt|#62);", ">", RegexOptions.IgnoreCase);
-            htmlstring = Regex.Replace(htmlstring, "&(nbsp|#160);", "   ", RegexOptions.IgnoreCase);
-            htmlstring = Regex.Replace(htmlstring, "&(iexcl|#161);", "\xa1", RegexOptions.IgnoreCase);
-            htmlstring = Regex.Replace(htmlstring, "&(cent|#162);", "\xa2", RegexOptions.IgnoreCase);
-            htmlstring = Regex.Replace(htmlstring, "&(pound|#163);", "\xa3", RegexOptions.IgnoreCase);
-            htmlstring = Regex.Replace(htmlstring, "&(copy|#169);", "\xa9", RegexOptions.IgnoreCase);
-            htmlstring = Regex.Replace(htmlstring, @"&#(\d+);", "", RegexOptions.IgnoreCase);
-
-            htmlstring.Replace("<", "");
-            htmlstring.Replace(">", "");
-            htmlstring.Replace("\r\n", "");
-
-            return htmlstring;
-        }
-
         /// <summary>
         /// 替换html的img路径为绝对路径
         /// </summary>
@@ -157,14 +131,18 @@ namespace Masuit.Tools.Html
             return Regex.Replace(s, @"<img src=""(http:\/\/.+?)/", @"<img src=""/");
         }
 
-        private static readonly Regex ImgRegex = new Regex(@"<img\b[^<>]*?\bsrc[\s\t\r\n]*=[\s\t\r\n]*[""']?[\s\t\r\n]*(?<src>[^\s\t\r\n""'<>]*)[^<>]*?/?[\s\t\r\n]*>");
-
         /// <summary>
         /// 匹配html的所有img标签集合
         /// </summary>
         /// <param name="html"></param>
         /// <returns></returns>
-        public static MatchCollection MatchImgTags(this string html) => ImgRegex.Matches(html);
+        public static IEnumerable<HtmlNode> MatchImgTags(this string html)
+        {
+            var doc = new HtmlDocument();
+            doc.LoadHtml(html);
+            var nodes = doc.DocumentNode.Descendants("img");
+            return nodes;
+        }
 
         /// <summary>
         /// 匹配html的所有img标签的src集合
@@ -173,18 +151,8 @@ namespace Masuit.Tools.Html
         /// <returns></returns>
         public static IEnumerable<string> MatchImgSrcs(this string html)
         {
-            foreach (Match m in ImgRegex.Matches(html))
-            {
-                yield return m.Groups["src"].Value;
-            }
+            return MatchImgTags(html).Where(n => n.Attributes.Contains("src")).Select(n => n.Attributes["src"].Value);
         }
-
-        /// <summary>
-        /// 匹配html的一个img标签
-        /// </summary>
-        /// <param name="html"></param>
-        /// <returns></returns>
-        public static Match MatchImgTag(this string html) => ImgRegex.Match(html);
 
         /// <summary>
         /// 获取html中第一个img标签的src
@@ -193,14 +161,7 @@ namespace Masuit.Tools.Html
         /// <returns></returns>
         public static string MatchFirstImgSrc(this string html)
         {
-            string src = ImgRegex.Match(html).Groups["src"].Value;
-            int index = src.IndexOf("\"", StringComparison.Ordinal);
-            if (index > 0)
-            {
-                src = src.Substring(0, index);
-            }
-
-            return src;
+            return MatchImgSrcs(html).FirstOrDefault();
         }
 
         /// <summary>
@@ -210,20 +171,9 @@ namespace Masuit.Tools.Html
         /// <returns></returns>
         public static string MatchRandomImgSrc(this string html)
         {
-            var collection = ImgRegex.Matches(html);
-            if (collection.Count > 0)
-            {
-                string src = collection[new Random().StrictNext(collection.Count)].Groups["src"].Value;
-                int index = src.IndexOf("\"", StringComparison.Ordinal);
-                if (index > 0)
-                {
-                    src = src.Substring(0, index);
-                }
-
-                return src;
-            }
-
-            return string.Empty;
+            int count = MatchImgSrcs(html).Count();
+            var rnd = new Random();
+            return MatchImgSrcs(html).ElementAtOrDefault(rnd.Next(count));
         }
 
         /// <summary>
@@ -232,11 +182,7 @@ namespace Masuit.Tools.Html
         /// <param name="str">html</param>
         public static string StrFormat(this string str)
         {
-            str = str.Replace("\r\n", "<br />");
-            str = str.Replace("\n", "<br />");
-            var str2 = str;
-
-            return str2;
+            return str.Replace("\r\n", "<br />").Replace("\n", "<br />");
         }
 
         /// <summary>
@@ -247,10 +193,7 @@ namespace Masuit.Tools.Html
         {
             if (strHtml != "")
             {
-                strHtml = strHtml.Replace(",", "&def");
-                strHtml = strHtml.Replace("'", "&dot");
-                strHtml = strHtml.Replace(";", "&dec");
-                return strHtml;
+                return strHtml.Replace(",", "&def").Replace("'", "&dot").Replace(";", "&dec");
             }
 
             return "";

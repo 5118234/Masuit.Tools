@@ -1,15 +1,24 @@
-# Masuit.Tools
+﻿# Masuit.Tools
 包含一些常用的操作类，大都是静态类，加密解密，反射操作，硬件信息，字符串扩展方法，日期时间扩展操作，大文件拷贝，图像裁剪，验证码等常用封装。
 
-[官网教程](http://masuit.com/55)  
-项目开发模式：日常代码积累+网络搜集
-
+[官网教程](https://masuit.com/55)  
+项目开发模式：日常代码积累+网络搜集  
+本项目已得到[JetBrains](https://www.jetbrains.com/shop/eform/opensource)的支持！  
+<img src="https://www.jetbrains.com/shop/static/images/jetbrains-logo-inv.svg" height="100">  
 [![LICENSE](https://img.shields.io/badge/license-Anti%20996-blue.svg)](https://github.com/996icu/996.ICU/blob/master/LICENSE)  
-请注意：一旦使用本开源项目以及引用了本项目或包含本项目代码的公司因为违反劳动法（包括但不限定非法裁员、超时用工、雇佣童工等）在任何法律诉讼中败诉的，项目作者有权利追讨本项目的使用费，或者直接不允许使用任何包含本项目的源代码！
+请注意：一旦使用本开源项目以及引用了本项目或包含本项目代码的公司因为违反劳动法（包括但不限定非法裁员、超时用工、雇佣童工等）在任何法律诉讼中败诉的，项目作者有权利追讨本项目的使用费，或者直接不允许使用任何包含本项目的源代码！任何性质的`外包公司`或`996公司`需要使用本类库，请联系作者进行商业授权！其他企业或个人可随意使用不受限。
 
-⭐⭐⭐喜欢这个项目的话就Star、Fork、Follow素质三连关♂注一下吧⭐⭐⭐
-
-# 特色功能示例代码
+⭐⭐⭐喜欢这个项目的话就Star、Fork、Follow素质三连关♂注一下吧⭐⭐⭐  
+## 安装程序包
+.NET Framework ≥4.6.1
+```shell
+PM> Install-Package Masuit.Tools.Net
+```
+.NET Core 3.x
+```shell
+PM> Install-Package Masuit.Tools.Core
+```
+## 特色功能示例代码
 ### 1.检验字符串是否是Email、手机号、URL、IP地址、身份证号
 ```csharp
 bool isEmail="3444764617@qq.com".MatchEmail();
@@ -250,6 +259,11 @@ List<string> files = ftpClient.GetFiles("/");//列出ftp服务端文件列表
 ### 17.多线程后台下载
 ```csharp
 var mtd = new MultiThreadDownloader("https://attachments-cdn.shimo.im/yXwC4kphjVQu06rH/KeyShot_Pro_7.3.37.7z",Environment.GetEnvironmentVariable("temp"),"E:\\Downloads\\KeyShot_Pro_7.3.37.7z",8);
+mtd.Configure(req =>
+ {
+     req.Referer = "https://masuit.com";
+     req.Headers.Add("Origin", "https://baidu.com");
+});
 mtd.TotalProgressChanged+=(sender, e) =>
 {
     var downloader = sender as MultiThreadDownloader;
@@ -273,41 +287,7 @@ socket.SendFile("D:\\test\\1.txt",false,i =>
     Console.WriteLine("已发送"+i+"%");
 });
 ```
-### 19.RedisHelper
-.Net Framework:
-```csharp
-RedisHelper redisHelper = RedisHelper.GetInstance();// 获取新实例并指定连接第0个数据库
-//RedisHelper redisHelper = RedisHelper.GetInstance(2);// 获取新实例并指定连接第2个数据库
-//RedisHelper redisHelper = RedisHelper.GetInstance("192.168.3.150:6379");// 获取新实例并指定连接第0个数据库
-//RedisHelper redisHelper = RedisHelper.GetInstance("192.168.3.150:6379",2);// 获取新实例并指定连接第2个数据库
-//RedisHelper redisHelper = RedisHelper.GetSingleInstance();// 获取单例实例并指定连接第2个数据库
-//RedisHelper redisHelper = RedisHelper.GetSingleInstance(2);// 获取单例实例并指定连接第2个数据库
-//RedisHelper redisHelper = RedisHelper.GetSingleInstance("192.168.3.150:6379");// 获取单例实例并指定连接第0个数据库
-//RedisHelper redisHelper = RedisHelper.GetSingleInstance("192.168.3.150:6379",2);// 获取单例实例并指定连接第2个数据库
-redisHelper.SetString("key","value");
-string value = redisHelper.GetString("key");
-redisHelper.ListLeftPush("list","value");
-List<string> list = redisHelper.ListRange<string>("list");
-```
-Asp.Net Core依赖注入方式:
-Startup.cs:
-```csharp
-services.AddDefaultRedisHelper("192.168.16.145:6379,password=xilife2018,connectTimeout=1000,connectRetry=1,syncTimeout=1000");//注入一个默认实例
-services.AddLocalRedisHelper();// 注入本地实例
-services.AddRedisHelper("aa", "192.168.16.145:6379,password=xilife2018,connectTimeout=1000,connectRetry=1,syncTimeout=1000");// 通用注入
-```
-Controller:
-```csharp
-public RedisHelper RedisHelper { get; set; }
-public HomeController(RedisHelperFactory redisHelperFactory)
-{
-    RedisHelper=redisHelperFactory.Create("aa",0);// 创建命名为aa的RedisHelper，指定数据库0
-    RedisHelper=redisHelperFactory.CreateDefault(0); // 创建默认的RedisHelper，指定数据库0
-    RedisHelper=redisHelperFactory.CreateLocal(0); // 创建连接本机的RedisHelper，指定数据库0
-}
-```
-方法调用方式和.NET Framework方式相同
-### 20.加密解密
+### 19.加密解密
 ```csharp
 var enc="123456".MDString();// MD5加密
 var enc="123456".MDString("abc");// MD5加盐加密
@@ -330,19 +310,7 @@ RsaKey rsaKey = RsaCrypt.GenerateRsaKeys();// 生成RSA密钥对
 string encrypt = "123456".RSAEncrypt(rsaKey.PublicKey);// 公钥加密
 string s = encrypt.RSADecrypt(rsaKey.PrivateKey);// 私钥解密
 ```
-### 21.Redis分布式锁
-```csharp
-using (RedisLock redisLock = new RedisLock("127.0.0.1:6379"))
-{
-    if (redisLock.TryLock("lock", TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(10), out var lockObject))// 加锁
-    {
-        //todo:需要执行的原子操作
-    }
-
-    var redisResult = redisLock.UnLock(lockObject);// 释放锁
-}
-```
-### 22.实体校验
+### 20.实体校验
 ```csharp
 public class MyClass
 {
@@ -362,13 +330,13 @@ public class MyClass
     public string Password { get; set; }
 }
 ```
-### 23.HTML操作
+### 21.HTML操作
 ```csharp
 List<string> srcs = "html".MatchImgSrcs().ToList();// 获取html字符串里所有的img标签的src属性
 var imgTags = "html".MatchImgTags();//获取html字符串里的所有的img标签
 ...
 ```
-### 24.DateTime扩展
+### 22.DateTime扩展
 ```csharp
 double milliseconds = DateTime.Now.GetTotalMilliseconds();// 获取毫秒级时间戳
 double microseconds = DateTime.Now.GetTotalMicroseconds();// 获取微秒级时间戳
@@ -377,7 +345,7 @@ double seconds = DateTime.Now.GetTotalSeconds();// 获取秒级时间戳
 double minutes = DateTime.Now.GetTotalMinutes();// 获取分钟级时间戳
 ...
 ```
-### 25.IP地址和URL
+### 23.IP地址和URL
 ```csharp
 bool inRange = "192.168.2.2".IpAddressInRange("192.168.1.1","192.168.3.255");// 判断IP地址是否在这个地址段里
 bool isPrivateIp = "172.16.23.25".IsPrivateIP();// 判断是否是私有地址
@@ -388,7 +356,7 @@ string isp = "114.114.114.114".GetISP(); // 获取ISP运营商信息
 PhysicsAddress physicsAddress = "114.114.114.114".GetPhysicsAddressInfo().Result;// 获取详细地理信息对象
 Tuple<string, List<string>> ipAddressInfo = "114.114.114.114".GetIPAddressInfo().Result;// 获取详细地理信息集合
 ```
-### 26.元素去重
+### 24.元素去重
 ```csharp
 var list = new List<MyClass>()
 {
@@ -408,7 +376,7 @@ var list = new List<MyClass>()
 List<MyClass> classes = list.DistinctBy(c => c.Email).ToList();
 Console.WriteLine(classes.Count==1);//True
 ```
-### 27.对象实体映射
+### 25.对象实体映射
 在使用前需要像automapper那样，对mapper进行初始化操作
 ```csharp
 using Masuit.Tools.Mapping;
@@ -797,7 +765,7 @@ time = HiPerfTimer.Execute(() =>
 });
 Console.WriteLine($"AutoMapper映射1000000次耗时：{time}s");// 4.1858825s
 ```
-### 28.枚举扩展
+### 26.枚举扩展
 ```csharp
 public enum MyEnum
 {
@@ -818,12 +786,12 @@ string display = MyEnum.Read.GetDisplay();// 获取Display标签的Name属性
 var value = typeof(MyEnum).GetValue("Read");//获取字符串表示值对应的枚举值
 string enumString = 0.ToEnumString(typeof(MyEnum));// 获取枚举值对应的字符串表示
 ```
-### 29.定长队列实现
+### 27.定长队列实现
 ```csharp
 LimitedQueue<string> queue = new LimitedQueue<string>(32);// 声明一个容量为32个元素的定长队列
 ConcurrentLimitedQueue<string> queue = new ConcurrentLimitedQueue<string>(32);// 声明一个容量为32个元素的线程安全的定长队列
 ```
-### 30.反射操作
+### 28.反射操作
 ```csharp
 MyClass myClass = new MyClass();
 PropertyInfo[] properties = myClass.GetProperties();// 获取属性列表
@@ -839,12 +807,12 @@ var mc = myClass.AddProperty(new List<ClassHelper.CustPropertyInfo>()
 object newObj = mc.DeleteProperty(new List<string>() { "Email", "Age", "IP", "PhoneNumber" });// 删除属性
 Console.WriteLine(newObj.ToJsonString());// {"Password":null,"Name":"张三","Number":123456.0}
 ```
-### 31.获取线程内唯一对象
+### 29.获取线程内唯一对象
 ```csharp
 CallContext<T>.SetData("db",dbContext);//设置线程内唯一对象
 CallContext<T>.GetData("db");//获取线程内唯一对象
 ```
-### 32.asp.net core 获取静态的HttpContext对象
+### 30.asp.net core 获取静态的HttpContext对象
 Startup.cs
 ```csharp
 public void ConfigureServices(IServiceCollection services)
@@ -868,7 +836,7 @@ public async Task<IActionResult> Index()
     HttpContext context = HttpContext2.Current;
 }
 ```
-### 33.邮件发送
+### 31.邮件发送
 ```csharp
 new Email()
 {
@@ -885,7 +853,7 @@ new Email()
     Console.WriteLine(s);// 发送成功后的回调
 });// 异步发送邮件
 ```
-### 34.图像的简单处理
+### 32.图像的简单处理
 ```csharp
 ImageUtilities.CompressImage(@"F:\src\1.jpg", @"F:\dest\2.jpg");//无损压缩图片
 
@@ -900,18 +868,58 @@ Bitmap newBmp = bmp.CutAndResize(new Rectangle(0, 0, 1600, 900), 160, 90);//裁�
 bmp.RevPicLR(bmp.Width, bmp.Height);//左右镜像
 bmp.RevPicUD(bmp.Width, bmp.Height);//上下镜像
 ```
-### 35.随机数
+### 33.随机数
 ```csharp
 Random rnd = new Random();
 int num = rnd.StrictNext();//产生真随机数
 double gauss = rnd.NextGauss(20,5);//产生正态分布的随机数
 ```
+### 34.权重筛选功能
+```csharp
+var data=new List<WeightedItem<string>>()
+{
+     new WeightedItem<string>("A", 1),
+     new WeightedItem<string>("B", 3),
+     new WeightedItem<string>("C", 4),
+     new WeightedItem<string>("D", 4),
+};
+var item=data.WeightedItem();//按权重选出1个元素
+var list=data.WeightedItems(2);//按权重选出2个元素
+```
+```csharp
+var selector = new WeightedSelector<string>(new List<WeightedItem<string>>()
+{
+    new WeightedItem<string>("A", 1),
+    new WeightedItem<string>("B", 3),
+    new WeightedItem<string>("C", 4),
+    new WeightedItem<string>("D", 4),
+});
+var item = selector.Select();//按权重选出1个元素
+var list = selector.SelectMultiple(3);//按权重选出3个元素
+```
+### 35.EF Core支持AddOrUpdate方法
+```csharp
+/// <summary>
+/// 按Id添加或更新文章实体
+/// </summary>
+public override Post SavePost(Post t)
+{
+    DataContext.Set<Post>().AddOrUpdate(t => t.Id, t);
+    return t;
+}
+```
+### 38.敏感信息掩码
+```csharp
+"13123456789".Mask(); // 131****5678
+"admin@masuit.com".MaskEmail(); // a****n@masuit.com
+```
+
 # Asp.Net MVC和Asp.Net Core的支持断点续传和多线程下载的ResumeFileResult
 
 允许你在ASP.NET Core中通过MVC/WebAPI应用程序传输文件数据时使用断点续传以及多线程下载。
 
 它允许提供`ETag`标题以及`Last-Modified`标题。 它还支持以下前置条件标题：`If-Match`，`If-None-Match`，`If-Modified-Since`，`If-Unmodified-Since`，`If-Range`。
-## 支持 ASP.NET Core 2.0
+## 支持 ASP.NET Core 2.0+
 从.NET Core2.0开始，ASP.NET Core内部支持断点续传。 因此只是对FileResult做了一些扩展。 只留下了“Content-Disposition” Inline的一部分。 所有代码都依赖于基础.NET类。
 
 ## 如何使用 
@@ -1096,6 +1104,7 @@ public IActionResult VirtualFile(bool fileName)
 
 开源博客系统：[Masuit.MyBlogs](https://github.com/ldqk/Masuit.MyBlogs "Masuit.MyBlogs")
 ### 友情赞助
-<figure class="third">
-        <img src="https://ww3.sinaimg.cn/large/006LWy2zgy1fvn02jlkdej30go0p0404.jpg" width=33%/><img src="https://ww3.sinaimg.cn/large/87c01ec7gy1fsqnp6iaj4j20u715fjuc.jpg" width=33%/><img src="https://ww4.sinaimg.cn/large/006LWy2zgy1fvci5pnydhj30k00u0myw.jpg" width=33%/>
-</figure>
+|支付宝|微信收款码|QQ转账|
+|---|--|---|
+|![支付宝](https://git.imweb.io/ldqk/imgbed/raw/master/20190810/%E5%BE%AE%E4%BF%A1%E5%9B%BE%E7%89%87_20190810204128.png)|![微信](https://git.imweb.io/ldqk/imgbed/raw/master/2018/2/5ccadc6b53f28.jpg)|![QQ](https://git.imweb.io/ldqk/imgbed/raw/master/2018/2/5ccadc6c9aa5b.jpg)|
+
