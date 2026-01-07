@@ -1,100 +1,86 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <Import Project="..\SDKPulishNuget.targets" />
+    <PropertyGroup>
+        <TargetFrameworks>netstandard2.0;netstandard2.1;net6;net8;net9</TargetFrameworks>
+        <Description>全龄段友好的C#万能工具库，码数吐司库(适用于.NET Core项目)，不管你是菜鸟新手还是骨灰级玩家都能轻松上手，包含一些常用的操作类，大都是静态类，加密解密，反射操作，权重随机筛选算法，分布式短id，表达式树，linq扩展，文件压缩，多线程下载和FTP客户端，硬件信息，字符串扩展方法，日期时间扩展操作，中国农历，大文件拷贝，图像裁剪，验证码，断点续传，集合扩展等常用封装。
+官网教程：https://tools.masuit.org
+github：https://github.com/ldqk/Masuit.Tools
+        </Description>
+        <Copyright>Copyright © 懒得勤快</Copyright>
+        <PackageProjectUrl>https://github.com/ldqk/Masuit.Tools</PackageProjectUrl>
+        <PackageTags>Masuit.Tools,工具库,Utility,Crypt,Extensions</PackageTags>
+        <PackageReleaseNotes>如有问题请联系作者QQ:3444764617，或者到项目的github反馈问题，
+详细的API文档在github上:https://github.com/ldqk/Masuit.Tools</PackageReleaseNotes>
+        <PackageRequireLicenseAcceptance>False</PackageRequireLicenseAcceptance>
+        <Product>Masuit.Tools.Core</Product>
+        <PackageId>Masuit.Tools.Core</PackageId>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <LangVersion>latest</LangVersion>
+        <UserSecretsId>830c282f-f7c1-42be-8651-4cd06ac8e73f</UserSecretsId>
+        <RepositoryType></RepositoryType>
+        <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+        <FileVersion>2.5.9.1</FileVersion>
+        <Company>masuit.org</Company>
+        <AssemblyVersion>2.5.9</AssemblyVersion>
+        <Authors>懒得勤快</Authors>
+        <RepositoryUrl>https://github.com/ldqk/Masuit.Tools</RepositoryUrl>
+        <EmbedUntrackedSources>true</EmbedUntrackedSources>
+        <IncludeSymbols>true</IncludeSymbols>
+        <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+        <GenerateDocumentationFile>True</GenerateDocumentationFile>
+        <Title>Masuit.Tools</Title>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+        <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings>
+        <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    </PropertyGroup>
 
-  <PropertyGroup>
-    <TargetFramework>netstandard2.1</TargetFramework>
-    <Description>
-      包含一些常用的操作类，大都是静态类，加密解密，反射操作，硬件信息，字符串扩展方法，日期时间扩展操作，大文件拷贝，图像裁剪，html处理，验证码、NoSql等常用封装。
-      官网教程：https://masuit.com/55
-      github：https://github.com/ldqk/Masuit.Tools
-    </Description>
-    <Copyright>Copyright © 懒得勤快</Copyright>
-    <PackageProjectUrl>https://github.com/ldqk/Masuit.Tools</PackageProjectUrl>
-    <PackageTags>Masuit.Tools</PackageTags>
-    <PackageReleaseNotes>如有问题请联系作者QQ:3444764617，或者到项目的github反馈问题，详细的API文档在github上:https://github.com/ldqk/Masuit.Tools</PackageReleaseNotes>
-    <PackageRequireLicenseAcceptance>False</PackageRequireLicenseAcceptance>
-    <PackageLicenseUrl>https://github.com/ldqk/Masuit.Tools/blob/master/LICENSE</PackageLicenseUrl>
-    <Product>Masuit.Tools.Core</Product>
-    <PackageId>Masuit.Tools.Core</PackageId>
-    <LangVersion>8.0</LangVersion>
-    <UserSecretsId>830c282f-f7c1-42be-8651-4cd06ac8e73f</UserSecretsId>
-    <RepositoryType>Github</RepositoryType>
-    <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
-    <Version>2.3.1.1</Version>
-    <FileVersion>2.3.1.1</FileVersion>
-    <Company>masuit.com</Company>
-    <AssemblyVersion>2.3.1.1</AssemblyVersion>
-    <Authors>懒得勤快X</Authors>
-    <RepositoryUrl>https://github.com/ldqk/Masuit.Tools</RepositoryUrl>
-  </PropertyGroup>
+    <ItemGroup>
+        <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
+    </ItemGroup>
 
-  <ItemGroup>
-    <Compile Remove="DateTimeExt\**" />
-    <Compile Remove="Hardware\**" />
-    <Compile Remove="Html\**" />
-    <Compile Remove="Linq\**" />
-    <Compile Remove="Logging\**" />
-    <Compile Remove="Mapping\**" />
-    <Compile Remove="Maths\**" />
-    <Compile Remove="Media\**" />
-    <Compile Remove="RandomSelector\**" />
-    <Compile Remove="Systems\**" />
-    <Compile Remove="Win32\**" />
-    <EmbeddedResource Remove="DateTimeExt\**" />
-    <EmbeddedResource Remove="Hardware\**" />
-    <EmbeddedResource Remove="Html\**" />
-    <EmbeddedResource Remove="Linq\**" />
-    <EmbeddedResource Remove="Logging\**" />
-    <EmbeddedResource Remove="Mapping\**" />
-    <EmbeddedResource Remove="Maths\**" />
-    <EmbeddedResource Remove="Media\**" />
-    <EmbeddedResource Remove="RandomSelector\**" />
-    <EmbeddedResource Remove="Systems\**" />
-    <EmbeddedResource Remove="Win32\**" />
-    <None Remove="DateTimeExt\**" />
-    <None Remove="Hardware\**" />
-    <None Remove="Html\**" />
-    <None Remove="Linq\**" />
-    <None Remove="Logging\**" />
-    <None Remove="Mapping\**" />
-    <None Remove="Maths\**" />
-    <None Remove="Media\**" />
-    <None Remove="RandomSelector\**" />
-    <None Remove="Systems\**" />
-    <None Remove="Win32\**" />
-  </ItemGroup>
+    <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard2.0'">
+        <PackageReference Include="Microsoft.EntityFrameworkCore" Version="[2.1.14]" />
+    </ItemGroup>
+    <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard2.1'">
+        <PackageReference Include="Microsoft.EntityFrameworkCore" Version="[3.1.32]" />
+    </ItemGroup>
+    <ItemGroup Condition=" '$(TargetFramework)' == 'net9'">
+        <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.7" />
+    </ItemGroup>
+    <ItemGroup Condition=" '$(TargetFramework)' == 'net6'">
+        <PackageReference Include="Microsoft.EntityFrameworkCore" Version="6.0.36" />
+    </ItemGroup>
+    <ItemGroup Condition=" '$(TargetFramework)' == 'net8'">
+        <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.18" />
+    </ItemGroup>
+    <ItemGroup>
+      <Compile Remove="..\Masuit.Tools.Abstractions\Mapping\**" />
+    </ItemGroup>
+    <ItemGroup>
+      <Compile Remove="..\Masuit.Tools.Abstractions\Models\AddressComponent.cs" />
+      <Compile Remove="..\Masuit.Tools.Abstractions\Models\AddressResult.cs" />
+      <Compile Remove="..\Masuit.Tools.Abstractions\Models\BaiduIP.cs" />
+      <Compile Remove="..\Masuit.Tools.Abstractions\Models\IspInfo.cs" />
+      <Compile Remove="..\Masuit.Tools.Abstractions\Models\Location.cs" />
+      <Compile Remove="..\Masuit.Tools.Abstractions\Models\PhysicsAddress.cs" />
+      <Compile Remove="..\Masuit.Tools.Abstractions\Models\Pois.cs" />
+      <Compile Remove="..\Masuit.Tools.Abstractions\Models\TaobaoIP.cs" />
+      <Compile Remove="..\Masuit.Tools.Abstractions\Reflection\ClassHelper.cs" />
+      <Compile Remove="..\Masuit.Tools.Abstractions\Systems\DisposeableDictionary.cs" />
+    </ItemGroup>
+    <ItemGroup>
+      <None Include="..\README.md">
+        <Pack>True</Pack>
+        <PackagePath>\</PackagePath>
+      </None>
+    </ItemGroup>
+    <ItemGroup>
+      <ProjectReference Include="..\Masuit.Tools.Abstractions\Masuit.Tools.Abstractions.csproj" />
+    </ItemGroup>
 
-  <ItemGroup>
-    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0" PrivateAssets="All" />
-  </ItemGroup>
-
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
-    <DocumentationFile>.\Masuit.Tools.Core.xml</DocumentationFile>
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <CodeAnalysisRuleSet />
-  </PropertyGroup>
-
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-    <CodeAnalysisRuleSet />
-    <DocumentationFile>.\Masuit.Tools.Core.xml</DocumentationFile>
-  </PropertyGroup>
-
-  <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.Mvc" Version="2.2.0" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="3.1.7" />
-    <PackageReference Include="Microsoft.Extensions.Http" Version="3.1.7" />
-    <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
-    <PackageReference Include="SharpCompress" Version="0.26.0" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Update="Masuit.Tools.Core.xml">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\Masuit.Tools.Abstractions\Masuit.Tools.Abstractions.csproj" />
-  </ItemGroup>
+    <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+        <DocumentationFile></DocumentationFile>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+        <CodeAnalysisRuleSet />
+    </PropertyGroup>
 </Project>

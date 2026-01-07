@@ -12,21 +12,15 @@ namespace Masuit.Tools.DateTimeExt
     /// </remarks>
     public class ChineseCalendar
     {
-        private class ChineseCalendarException : Exception
-        {
-            public ChineseCalendarException(string msg) : base(msg)
-            {
-            }
-        }
+        private class ChineseCalendarException(string msg) : Exception(msg);
 
         private readonly DateTime _datetime;
 
         #region 基础数据
 
         private const int MinYear = 1900;
-        private const int MaxYear = 2050;
+        private const int MaxYear = 2100;
         private static readonly DateTime MinDay = new DateTime(1900, 1, 30);
-        private static readonly DateTime MaxDay = new DateTime(2049, 12, 31);
         private const int GanZhiStartYear = 1864; //干支计算起始年
         private static readonly DateTime GanZhiStartDay = new DateTime(1899, 12, 22); //起始日
         private const string HzNum = "零一二三四五六七八九";
@@ -37,164 +31,44 @@ namespace Masuit.Tools.DateTimeExt
         /// 来源于网上的农历数据
         /// </summary>
         /// <remarks>
-        /// 数据结构如下，共使用17位数据
-        /// 第17位：表示闰月天数，0表示29天   1表示30天
-        /// 第16位-第5位（共12位）表示12个月，其中第16位表示第一月，如果该月为30天则为1，29天为0
-        /// 第4位-第1位（共4位）表示闰月是哪个月，如果当年没有闰月，则置0
+        /// 数据结构如下，共使用17位数据<br/>
+        /// 说明如下：<br/>
+        ///1-4：判断当年是否为闰年，若为闰年，则为闰年的月份，反之为0；<br/>
+        ///5-16：为除了闰月外的正常月份是大月还是小月，1为30天，0为29天。（注意：1月对应第16位，2月对应第15位……12月对应第5位)<br/>
+        ///17-20： 表示闰月是大月还是小月，若为1，则为大月，若为0，则为小月。（注意：仅当存在闰月的情况下有意义）<br/>
+        /// -<br/>
+        ///举例说明：<br/>
+        ///例一：0x04bd8<br/>
+        ///对应二进制：0000    0100     1011    1101    1000<br/>
+        ///则表示当年有闰月8月，且闰月为小月29天<br/>
+        ///该年1-12月的天数为：29    30   29   29   30   29   30    29（闰月）  30     30   29    30<br/>
+        ///例二：0x04ae0<br/>
+        ///对应二进制：0000    0100     1010    1110    0000<br/>
+        ///则表示当年没有闰月<br/>
+        ///该年1-12月的天数为：29    30    29     29    30    29    30    29    30   30    30    29<br/>
+        ///补充闰月介绍：<br/>
+        ///闰月是阴阳历中为使历年平均长度接近会归年而增设的月。阴阳历以朔望月的长度（29.5306日）为一个月的平均值，全年12个月，同回归年（365.2422日）相差约10日21时，故需要置闰，三年闰一个月，五年闰二个月，十九年闰七个月。阴阳历以朔望月的长度（29.5306日）为一个月的平均值，全年12个月，同回归年（365.2422日）相差约10日21时，故需要置闰，三年闰一个月，五年闰二个月，十九年闰七个月。
         ///</remarks>
         private static readonly int[] LunarDateArray =
         {
-            0x04BD8,
-            0x04AE0,
-            0x0A570,
-            0x054D5,
-            0x0D260,
-            0x0D950,
-            0x16554,
-            0x056A0,
-            0x09AD0,
-            0x055D2,
-            0x04AE0,
-            0x0A5B6,
-            0x0A4D0,
-            0x0D250,
-            0x1D255,
-            0x0B540,
-            0x0D6A0,
-            0x0ADA2,
-            0x095B0,
-            0x14977,
-            0x04970,
-            0x0A4B0,
-            0x0B4B5,
-            0x06A50,
-            0x06D40,
-            0x1AB54,
-            0x02B60,
-            0x09570,
-            0x052F2,
-            0x04970,
-            0x06566,
-            0x0D4A0,
-            0x0EA50,
-            0x06E95,
-            0x05AD0,
-            0x02B60,
-            0x186E3,
-            0x092E0,
-            0x1C8D7,
-            0x0C950,
-            0x0D4A0,
-            0x1D8A6,
-            0x0B550,
-            0x056A0,
-            0x1A5B4,
-            0x025D0,
-            0x092D0,
-            0x0D2B2,
-            0x0A950,
-            0x0B557,
-            0x06CA0,
-            0x0B550,
-            0x15355,
-            0x04DA0,
-            0x0A5B0,
-            0x14573,
-            0x052B0,
-            0x0A9A8,
-            0x0E950,
-            0x06AA0,
-            0x0AEA6,
-            0x0AB50,
-            0x04B60,
-            0x0AAE4,
-            0x0A570,
-            0x05260,
-            0x0F263,
-            0x0D950,
-            0x05B57,
-            0x056A0,
-            0x096D0,
-            0x04DD5,
-            0x04AD0,
-            0x0A4D0,
-            0x0D4D4,
-            0x0D250,
-            0x0D558,
-            0x0B540,
-            0x0B6A0,
-            0x195A6,
-            0x095B0,
-            0x049B0,
-            0x0A974,
-            0x0A4B0,
-            0x0B27A,
-            0x06A50,
-            0x06D40,
-            0x0AF46,
-            0x0AB60,
-            0x09570,
-            0x04AF5,
-            0x04970,
-            0x064B0,
-            0x074A3,
-            0x0EA50,
-            0x06B58,
-            0x055C0,
-            0x0AB60,
-            0x096D5,
-            0x092E0,
-            0x0C960,
-            0x0D954,
-            0x0D4A0,
-            0x0DA50,
-            0x07552,
-            0x056A0,
-            0x0ABB7,
-            0x025D0,
-            0x092D0,
-            0x0CAB5,
-            0x0A950,
-            0x0B4A0,
-            0x0BAA4,
-            0x0AD50,
-            0x055D9,
-            0x04BA0,
-            0x0A5B0,
-            0x15176,
-            0x052B0,
-            0x0A930,
-            0x07954,
-            0x06AA0,
-            0x0AD50,
-            0x05B52,
-            0x04B60,
-            0x0A6E6,
-            0x0A4E0,
-            0x0D260,
-            0x0EA65,
-            0x0D530,
-            0x05AA0,
-            0x076A3,
-            0x096D0,
-            0x04BD7,
-            0x04AD0,
-            0x0A4D0,
-            0x1D0B6,
-            0x0D250,
-            0x0D520,
-            0x0DD45,
-            0x0B5A0,
-            0x056D0,
-            0x055B2,
-            0x049B0,
-            0x0A577,
-            0x0A4B0,
-            0x0AA50,
-            0x1B255,
-            0x06D20,
-            0x0ADA0,
-            0x14B63
+            0x04BD8, 0x04AE0, 0x0A570, 0x054D5, 0x0D260, 0x0D950, 0x16554, 0x056A0, 0x09AD0, 0x055D2, 0x04AE0,
+            0x0A5B6, 0x0A4D0, 0x0D250, 0x1D255, 0x0B540, 0x0D6A0, 0x0ADA2, 0x095B0, 0x14977, 0x04970, 0x0A4B0,
+            0x0B4B5, 0x06A50, 0x06D40, 0x1AB54, 0x02B60, 0x09570, 0x052F2, 0x04970, 0x06566, 0x0D4A0, 0x0EA50,
+            0x06E95, 0x05AD0, 0x02B60, 0x186E3, 0x092E0, 0x1C8D7, 0x0C950, 0x0D4A0, 0x1D8A6, 0x0B550, 0x056A0,
+            0x1A5B4, 0x025D0, 0x092D0, 0x0D2B2, 0x0A950, 0x0B557, 0x06CA0, 0x0B550, 0x15355, 0x04DA0, 0x0A5B0,
+            0x14573, 0x052B0, 0x0A9A8, 0x0E950, 0x06AA0, 0x0AEA6, 0x0AB50, 0x04B60, 0x0AAE4, 0x0A570, 0x05260,
+            0x0F263, 0x0D950, 0x05B57, 0x056A0, 0x096D0, 0x04DD5, 0x04AD0, 0x0A4D0, 0x0D4D4, 0x0D250, 0x0D558,
+            0x0B540, 0x0B6A0, 0x195A6, 0x095B0, 0x049B0, 0x0A974, 0x0A4B0, 0x0B27A, 0x06A50, 0x06D40, 0x0AF46,
+            0x0AB60, 0x09570, 0x04AF5, 0x04970, 0x064B0, 0x074A3, 0x0EA50, 0x06B58, 0x055C0, 0x0AB60, 0x096D5,
+            0x092E0, 0x0C960, 0x0D954, 0x0D4A0, 0x0DA50, 0x07552, 0x056A0, 0x0ABB7, 0x025D0, 0x092D0, 0x0CAB5,
+            0x0A950, 0x0B4A0, 0x0BAA4, 0x0AD50, 0x055D9, 0x04BA0, 0x0A5B0, 0x15176, 0x052B0, 0x0A930, 0x07954,
+            0x06AA0, 0x0AD50, 0x05B52, 0x04B60, 0x0A6E6, 0x0A4E0, 0x0D260, 0x0EA65, 0x0D530, 0x05AA0, 0x076A3,
+            0x096D0, 0x04BD7, 0x04AD0, 0x0A4D0, 0x1D0B6, 0x0D250, 0x0D520, 0x0DD45, 0x0B5A0, 0x056D0, 0x055B2,
+            0x049B0, 0x0A577, 0x0A4B0, 0x0AA50, 0x1B255, 0x06D20, 0x0ADA0, 0x14B63, 0x9370, 0x49f8, 0x4970,
+            0x64b0, 0x168a6, 0xea50, 0x6aa0, 0x1a6c4, 0xaae0, 0x92e0, 0xd2e3, 0xc960, 0xd557, 0xd4a0, 0xda50,
+            0x5d55, 0x56a0, 0xa6d0, 0x55d4, 0x52d0, 0xa9b8, 0xa950, 0xb4a0, 0xb6a6, 0xad50, 0x55a0, 0xaba4,
+            0xa5b0, 0x52b0, 0xb273, 0x6930, 0x7337, 0x6aa0, 0xad50, 0x14b55, 0x4b60, 0xa570, 0x54e4, 0xd160,
+            0xe968, 0xd520, 0xdaa0, 0x16aa6, 0x56d0, 0x4ae0, 0xa9d4, 0xa2d0, 0xd150, 0xf252, 0xd520
         };
 
         /// <summary>
@@ -202,49 +76,9 @@ namespace Masuit.Tools.DateTimeExt
         /// </summary>
         private static readonly string[] ConstellationName =
         {
-            "白羊座",
-            "金牛座",
-            "双子座",
-            "巨蟹座",
-            "狮子座",
-            "处女座",
-            "天秤座",
-            "天蝎座",
-            "射手座",
-            "摩羯座",
-            "水瓶座",
-            "双鱼座"
-        };
-
-        /// <summary>
-        /// 二十四节气
-        /// </summary>
-        private static readonly string[] LunarHolidayName =
-        {
-            "小寒",
-            "大寒",
-            "立春",
-            "雨水",
-            "惊蛰",
-            "春分",
-            "清明",
-            "谷雨",
-            "立夏",
-            "小满",
-            "芒种",
-            "夏至",
-            "小暑",
-            "大暑",
-            "立秋",
-            "处暑",
-            "白露",
-            "秋分",
-            "寒露",
-            "霜降",
-            "立冬",
-            "小雪",
-            "大雪",
-            "冬至"
+            "白羊座", "金牛座", "双子座", "巨蟹座",
+            "狮子座", "处女座", "天秤座", "天蝎座",
+            "射手座", "摩羯座", "水瓶座", "双鱼座"
         };
 
         /// <summary>
@@ -252,35 +86,11 @@ namespace Masuit.Tools.DateTimeExt
         /// </summary>
         private static readonly string[] ChineseConstellationName =
         {
-            //四        五      六         日        一      二      三  
-            "角木蛟",
-            "亢金龙",
-            "女土蝠",
-            "房日兔",
-            "心月狐",
-            "尾火虎",
-            "箕水豹",
-            "斗木獬",
-            "牛金牛",
-            "氐土貉",
-            "虚日鼠",
-            "危月燕",
-            "室火猪",
-            "壁水獝",
-            "奎木狼",
-            "娄金狗",
-            "胃土彘",
-            "昴日鸡",
-            "毕月乌",
-            "觜火猴",
-            "参水猿",
-            "井木犴",
-            "鬼金羊",
-            "柳土獐",
-            "星日马",
-            "张月鹿",
-            "翼火蛇",
-            "轸水蚓"
+            //四           五          六         日          一         二         三
+            "角木蛟", "亢金龙","氐土貉" , "房日兔", "心月狐", "尾火虎", "箕水豹",
+            "斗木獬", "牛金牛", "女土蝠", "虚日鼠", "危月燕", "室火猪", "壁水獝",
+            "奎木狼", "娄金狗", "胃土彘", "昴日鸡", "毕月乌", "觜火猴", "参水猿",
+            "井木犴", "鬼金羊", "柳土獐", "星日马", "张月鹿", "翼火蛇", "轸水蚓"
         };
 
         #region 节气数据
@@ -290,30 +100,10 @@ namespace Masuit.Tools.DateTimeExt
         /// </summary>
         private static readonly string[] SolarTerm =
         {
-            "小寒",
-            "大寒",
-            "立春",
-            "雨水",
-            "惊蛰",
-            "春分",
-            "清明",
-            "谷雨",
-            "立夏",
-            "小满",
-            "芒种",
-            "夏至",
-            "小暑",
-            "大暑",
-            "立秋",
-            "处暑",
-            "白露",
-            "秋分",
-            "寒露",
-            "霜降",
-            "立冬",
-            "小雪",
-            "大雪",
-            "冬至"
+            "小寒", "大寒", "立春", "雨水", "惊蛰", "春分",
+            "清明", "谷雨", "立夏", "小满", "芒种", "夏至",
+            "小暑", "大暑", "立秋", "处暑", "白露", "秋分",
+            "寒露", "霜降", "立冬", "小雪", "大雪", "冬至"
         };
 
         private static readonly int[] STermInfo =
@@ -344,7 +134,7 @@ namespace Masuit.Tools.DateTimeExt
             504758
         };
 
-        #endregion
+        #endregion 节气数据
 
         #region 农历相关数据
 
@@ -356,40 +146,28 @@ namespace Masuit.Tools.DateTimeExt
 
         private static readonly string[] MonthString =
         {
-            "出错",
-            "正月",
-            "二月",
-            "三月",
-            "四月",
-            "五月",
-            "六月",
-            "七月",
-            "八月",
-            "九月",
-            "十月",
-            "十一月",
-            "腊月"
+            "出错", "正月", "二月", "三月", "四月", "五月", "六月", "七月", "八月", "九月", "十月", "冬月", "腊月"
         };
 
-        #endregion
+        #endregion 农历相关数据
 
         #region 节日数据
 
         /// <summary>
         /// 自定义的工作日
         /// </summary>
-        public static HashSet<DateTime> CustomWorkDays { get; } = new HashSet<DateTime>();
+        public static HashSet<DateTime> CustomWorkDays { get; } = [];
 
         /// <summary>
         /// 自定义的节假日
         /// </summary>
-        public static Dictionary<DateTime, string> CustomHolidays { get; } = new Dictionary<DateTime, string>();
+        public static Dictionary<DateTime, string> CustomHolidays { get; } = new();
 
         /// <summary>
         /// 按公历计算的通用节假日
         /// </summary>
-        private static HashSet<DateInfoStruct> SolarHolidayInfo { get; } = new HashSet<DateInfoStruct>
-        {
+        private static HashSet<DateInfoStruct> SolarHolidayInfo { get; } =
+        [
             new DateInfoStruct(1, 1, 1, "元旦"),
             new DateInfoStruct(2, 2, 0, "世界湿地日"),
             new DateInfoStruct(2, 10, 0, "国际气象节"),
@@ -437,13 +215,13 @@ namespace Masuit.Tools.DateTimeExt
             new DateInfoStruct(12, 24, 0, "平安夜"),
             new DateInfoStruct(12, 25, 0, "圣诞节"),
             new DateInfoStruct(12, 26, 0, " 诞辰纪念")
-        };
+        ];
 
         /// <summary>
         /// 按农历计算的通用节假日
         /// </summary>
-        private static HashSet<DateInfoStruct> LunarHolidayInfo { get; } = new HashSet<DateInfoStruct>
-        {
+        private static HashSet<DateInfoStruct> LunarHolidayInfo { get; } =
+        [
             new DateInfoStruct(1, 1, 6, "春节"),
             new DateInfoStruct(1, 15, 0, "元宵节"),
             new DateInfoStruct(5, 5, 1, "端午节"),
@@ -453,36 +231,42 @@ namespace Masuit.Tools.DateTimeExt
             new DateInfoStruct(9, 9, 0, "重阳节"),
             new DateInfoStruct(12, 8, 0, "腊八节"),
             new DateInfoStruct(12, 23, 0, "北方小年(扫房)"),
-            new DateInfoStruct(12, 24, 0, "南方小年(掸尘)"),
-            //new HolidayStruct(12, 30, 0, "除夕")  //注意除夕需要其它方法进行计算
-        };
+            new DateInfoStruct(12, 24, 0, "南方小年(掸尘)")
 
+            //new HolidayStruct(12, 30, 0, "除夕")  //注意除夕需要其它方法进行计算
+        ];
 
         private static readonly WeekHolidayStruct[] WHolidayInfo =
         {
-            new WeekHolidayStruct(5, 2, 1, "母亲节"),
-            new WeekHolidayStruct(5, 3, 1, "全国助残日"),
-            new WeekHolidayStruct(6, 3, 1, "父亲节"),
-            new WeekHolidayStruct(9, 3, 3, "国际和平日"),
-            new WeekHolidayStruct(9, 4, 1, "国际聋人节"),
-            new WeekHolidayStruct(10, 1, 2, "国际住房日"),
-            new WeekHolidayStruct(10, 1, 4, "国际减轻自然灾害日"),
-            new WeekHolidayStruct(11, 4, 5, "感恩节")
+            new(5, 2, 1, "母亲节"),
+            new(5, 3, 1, "全国助残日"),
+            new(6, 3, 1, "父亲节"),
+            new(9, 3, 3, "国际和平日"),
+            new(9, 4, 1, "国际聋人节"),
+            new(10, 1, 2, "国际住房日"),
+            new(10, 1, 4, "国际减轻自然灾害日"),
+            new(11, 4, 5, "感恩节")
         };
 
-        #endregion
+        #endregion 节日数据
 
-        #endregion
+        #endregion 基础数据
 
         /// <summary>
         /// 用一个标准的公历日期来初使化
         /// </summary>
         /// <param name="dt"></param>
-        public ChineseCalendar(DateTime dt)
+        public ChineseCalendar(in DateTime dt)
         {
+            if (dt.Year > MaxYear)
+            {
+                throw new ChineseCalendarException("最大年份支持2100年");
+            }
+
             int i;
             Date = dt.Date;
             _datetime = dt;
+
             //农历日期计算部分
             var temp = 0;
             var ts = Date - MinDay; //计算两天的基本差距
@@ -500,6 +284,7 @@ namespace Masuit.Tools.DateTimeExt
 
             ChineseYear = i;
             var leap = GetChineseLeapMonth(ChineseYear);
+
             //设定当年是否有闰月
             IsChineseLeapYear = leap > 0;
             IsChineseLeapMonth = false;
@@ -537,10 +322,10 @@ namespace Masuit.Tools.DateTimeExt
         /// <param name="cm">农历月</param>
         /// <param name="cd">农历日</param>
         /// <param name="leapMonthFlag">闰月标志</param>
-        public ChineseCalendar(int cy, int cm, int cd, bool leapMonthFlag)
+        public ChineseCalendar(int cy, int cm, int cd)
         {
             int i, temp;
-            CheckChineseDateLimit(cy, cm, cd, leapMonthFlag);
+            CheckChineseDateLimit(cy, cm, cd);
             ChineseYear = cy;
             ChineseMonth = cm;
             ChineseDay = cd;
@@ -553,8 +338,8 @@ namespace Masuit.Tools.DateTimeExt
 
             var leap = GetChineseLeapMonth(cy);
             IsChineseLeapYear = leap != 0;
-            IsChineseLeapMonth = cm == leap && leapMonthFlag;
-            if (IsChineseLeapYear == false || cm < leap) //当年没有闰月||计算月份小于闰月     
+            IsChineseLeapMonth = cm == leap;
+            if (IsChineseLeapYear == false || cm < leap) //当年没有闰月||计算月份小于闰月
             {
                 for (i = 1; i < cm; i++)
                 {
@@ -618,9 +403,14 @@ namespace Masuit.Tools.DateTimeExt
         /// <param name="year"></param>
         /// <param name="month"></param>
         /// <returns></returns>
-        private int GetChineseMonthDays(int year, int month)
+        internal int GetChineseMonthDays(int year, int month)
         {
             return BitTest32(LunarDateArray[year - MinYear] & 0x0000FFFF, 16 - month) ? 30 : 29;
+        }
+
+        internal int GetChineseMonthDays()
+        {
+            return BitTest32(LunarDateArray[ChineseYear - MinYear] & 0x0000FFFF, 16 - ChineseMonth) ? 30 : 29;
         }
 
         /// <summary>
@@ -653,6 +443,7 @@ namespace Masuit.Tools.DateTimeExt
             var sumDay = 348;
             var i = 0x8000;
             var info = LunarDateArray[year - MinYear] & 0x0FFFF;
+
             //计算12个月中有多少天为30天
             for (int m = 0; m < 12; m++)
             {
@@ -673,7 +464,7 @@ namespace Masuit.Tools.DateTimeExt
         /// </summary>
         /// <param name="dt"></param>
         /// <returns></returns>
-        /// 
+        ///
         private string GetChineseHour(DateTime dt)
         {
             //计算时辰的地支
@@ -704,8 +495,7 @@ namespace Masuit.Tools.DateTimeExt
         /// <param name="year"></param>
         /// <param name="month"></param>
         /// <param name="day"></param>
-        /// <param name="leapMonth"></param>
-        private void CheckChineseDateLimit(int year, int month, int day, bool leapMonth)
+        private void CheckChineseDateLimit(int year, int month, int day)
         {
             if (year < MinYear || year > MaxYear)
             {
@@ -717,13 +507,7 @@ namespace Masuit.Tools.DateTimeExt
                 throw new ChineseCalendarException("非法农历日期");
             }
 
-            if (day < 1 || day > 30) //中国的月最多30天
-            {
-                throw new ChineseCalendarException("非法农历日期");
-            }
-
-            int leap = GetChineseLeapMonth(year); // 计算该年应该闰哪个月
-            if (leapMonth && month != leap)
+            if (day is < 1 or > 30) //中国的月最多30天
             {
                 throw new ChineseCalendarException("非法农历日期");
             }
@@ -832,7 +616,7 @@ namespace Masuit.Tools.DateTimeExt
             return result;
         }
 
-        #endregion
+        #endregion 私有函数
 
         #region 节日
 
@@ -993,7 +777,7 @@ namespace Masuit.Tools.DateTimeExt
             return Date.DayOfWeek == DayOfWeek.Saturday || Date.DayOfWeek == DayOfWeek.Sunday;
         }
 
-        #endregion
+        #endregion 节日
 
         #region 公历日期
 
@@ -1050,29 +834,29 @@ namespace Masuit.Tools.DateTimeExt
         /// </summary>
         public string ChineseHour => GetChineseHour(_datetime);
 
-        #endregion
+        #endregion 公历日期
 
         #region 农历日期
 
         /// <summary>
         /// 农历今天
         /// </summary>
-        public static ChineseCalendar Today => new ChineseCalendar(DateTime.Today);
+        public static ChineseCalendar Today => new(DateTime.Today);
 
         /// <summary>
         /// 是否闰月
         /// </summary>
-        public bool IsChineseLeapMonth { get; private set; }
+        public bool IsChineseLeapMonth { get; }
 
         /// <summary>
         /// 当年是否有闰月
         /// </summary>
-        public bool IsChineseLeapYear { get; private set; }
+        public bool IsChineseLeapYear { get; }
 
         /// <summary>
         /// 农历日
         /// </summary>
-        public int ChineseDay { get; private set; }
+        public int ChineseDay { get; }
 
         /// <summary>
         /// 农历日中文表示
@@ -1089,7 +873,7 @@ namespace Masuit.Tools.DateTimeExt
         /// <summary>
         /// 农历的月份
         /// </summary>
-        public int ChineseMonth { get; private set; }
+        public int ChineseMonth { get; }
 
         /// <summary>
         /// 农历月份字符串
@@ -1099,7 +883,7 @@ namespace Masuit.Tools.DateTimeExt
         /// <summary>
         /// 取农历年份
         /// </summary>
-        public int ChineseYear { get; private set; }
+        public int ChineseYear { get; }
 
         /// <summary>
         /// 取农历年字符串如，一九九七年
@@ -1150,8 +934,7 @@ namespace Masuit.Tools.DateTimeExt
         {
             get
             {
-                var baseDateAndTime = new DateTime(1900, 1, 6, 2, 5, 0); //#1/6/1900 2:05:00 AM#
-                string tempStr = "";
+                var baseDateAndTime = new DateTime(1900, 1, 6, 2, 5, 0, DateTimeKind.Local); //#1/6/1900 2:05:00 AM#
                 var y = Date.Year;
                 for (int i = 1; i <= 24; i++)
                 {
@@ -1162,70 +945,59 @@ namespace Masuit.Tools.DateTimeExt
                         continue;
                     }
 
-                    tempStr = SolarTerm[i - 1];
-                    break;
+                    return SolarTerm[i - 1];
                 }
 
-                return tempStr;
+                return "";
             }
         }
 
         /// <summary>
         /// 当前日期前一个最近节气
         /// </summary>
-        public string ChineseTwentyFourPrevDay
+        public ChineseCalendar ChineseTwentyFourPrevDay
         {
             get
             {
-                DateTime baseDateAndTime = new DateTime(1900, 1, 6, 2, 5, 0); //#1/6/1900 2:05:00 AM#
-                string tempStr = "";
-                var y = Date.Year;
-                for (int i = 24; i >= 1; i--)
+                for (int i = 1; i <= 16; i++)
                 {
-                    var num = 525948.76 * (y - 1900) + STermInfo[i - 1];
-                    var newDate = baseDateAndTime.AddMinutes(num);
-                    if (newDate.DayOfYear < Date.DayOfYear)
+                    var calendar = AddDays(-i);
+                    if (SolarTerm.Contains(calendar.ChineseTwentyFourDay))
                     {
-                        tempStr = $"{SolarTerm[i - 1]}[{newDate:yyyy-MM-dd}]";
-                        break;
+                        return calendar;
                     }
                 }
 
-                return tempStr;
+                return this;
             }
         }
 
         /// <summary>
         /// 当前日期后一个最近节气
         /// </summary>
-        public string ChineseTwentyFourNextDay
+        public ChineseCalendar ChineseTwentyFourNextDay
         {
             get
             {
-                var baseDateAndTime = new DateTime(1900, 1, 6, 2, 5, 0); //#1/6/1900 2:05:00 AM#
-                string tempStr = "";
-                var y = Date.Year;
-                for (int i = 1; i <= 24; i++)
+                for (int i = 1; i <= 16; i++)
                 {
-                    var num = 525948.76 * (y - 1900) + STermInfo[i - 1];
-                    var newDate = baseDateAndTime.AddMinutes(num);
-                    if (newDate.DayOfYear > Date.DayOfYear)
+                    var calendar = AddDays(i);
+                    if (SolarTerm.Contains(calendar.ChineseTwentyFourDay))
                     {
-                        tempStr = $"{SolarTerm[i - 1]}[{newDate:yyyy-MM-dd}]";
-                        break;
+                        return calendar;
                     }
                 }
 
-                return tempStr;
+                return this;
             }
         }
 
-        #endregion
+        #endregion 农历日期
 
         #region 星座
 
         /// <summary>
-        /// 计算指定日期的星座序号 
+        /// 计算指定日期的星座序号
         /// </summary>
         /// <returns></returns>
         public string Constellation
@@ -1236,31 +1008,31 @@ namespace Masuit.Tools.DateTimeExt
                 var m = Date.Month;
                 var d = Date.Day;
                 var y = m * 100 + d;
-                if (y >= 321 && y <= 419)
+                if (y is >= 321 and <= 419)
                 {
                     index = 0;
                 }
-                else if (y >= 420 && y <= 520)
+                else if (y is >= 420 and <= 520)
                 {
                     index = 1;
                 }
-                else if (y >= 521 && y <= 620)
+                else if (y is >= 521 and <= 620)
                 {
                     index = 2;
                 }
-                else if (y >= 621 && y <= 722)
+                else if (y is >= 621 and <= 722)
                 {
                     index = 3;
                 }
-                else if (y >= 723 && y <= 822)
+                else if (y is >= 723 and <= 822)
                 {
                     index = 4;
                 }
-                else if (y >= 823 && y <= 922)
+                else if (y is >= 823 and <= 922)
                 {
                     index = 5;
                 }
-                else if (y >= 923 && y <= 1022)
+                else if (y is >= 923 and <= 1022)
                 {
                     index = 6;
                 }
@@ -1268,19 +1040,19 @@ namespace Masuit.Tools.DateTimeExt
                 {
                     index = 7;
                 }
-                else if (y >= 1122 && y <= 1221)
+                else if (y is >= 1122 and <= 1221)
                 {
                     index = 8;
                 }
-                else if (y >= 1222 || y <= 119)
+                else if (y is >= 1222 or <= 119)
                 {
                     index = 9;
                 }
-                else if (y >= 120 && y <= 218)
+                else if (y is >= 120 and <= 218)
                 {
                     index = 10;
                 }
-                else if (y >= 219 && y <= 320)
+                else if (y is >= 219 and <= 320)
                 {
                     index = 11;
                 }
@@ -1293,7 +1065,7 @@ namespace Masuit.Tools.DateTimeExt
             }
         }
 
-        #endregion
+        #endregion 星座
 
         #region 生肖
 
@@ -1322,7 +1094,7 @@ namespace Masuit.Tools.DateTimeExt
             }
         }
 
-        #endregion
+        #endregion 生肖
 
         #region 天干地支
 
@@ -1358,6 +1130,7 @@ namespace Masuit.Tools.DateTimeExt
                 }
 
                 var zhi = DiZhi[zhiIndex - 1].ToString();
+
                 //根据当年的干支年的干来计算月干的第一个
                 int ganIndex = 1;
                 int i = (ChineseYear - GanZhiStartYear) % 60; //计算干支
@@ -1400,19 +1173,19 @@ namespace Masuit.Tools.DateTimeExt
         /// </summary>
         public string GanZhiDateString => GanZhiYearString + GanZhiMonthString + GanZhiDayString;
 
-        #endregion
+        #endregion 天干地支
 
         /// <summary>
         /// 取下一天
         /// </summary>
         /// <returns></returns>
-        public ChineseCalendar NextDay => new ChineseCalendar(Date.AddDays(1));
+        public ChineseCalendar NextDay => new(Date.AddDays(1));
 
         /// <summary>
         /// 取前一天
         /// </summary>
         /// <returns></returns>
-        public ChineseCalendar PervDay => new ChineseCalendar(Date.AddDays(-1));
+        public ChineseCalendar PrevDay => new(Date.AddDays(-1));
 
         /// <summary>
         /// 取下n天
@@ -1452,6 +1225,15 @@ namespace Masuit.Tools.DateTimeExt
         public ChineseCalendar AddMonths(int months)
         {
             return new ChineseCalendar(Date.AddMonths(months));
+        }
+
+        /// <summary>Determines whether the specified object is equal to the current object.</summary>
+        /// <param name="obj">The object to compare with the current object.</param>
+        /// <returns>
+        /// <see langword="true" /> if the specified object  is equal to the current object; otherwise, <see langword="false" />.</returns>
+        public override bool Equals(object obj)
+        {
+            return Date.Equals(((ChineseCalendar)obj).Date);
         }
     }
 }
